@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: moments-dashboard
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: node server/server.js
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: DATA_DIR
+        value: /var/data
+      - key: CAJA_PIN
+        sync: false
+    disk:
+      name: moments-data
+      mountPath: /var/data
+      sizeGB: 1

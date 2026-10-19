@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+*.log
+
+# La base de datos real vive en el disco de Render, nunca en GitHub
+server/data/*.json
+server/data/*.tmp
+server/data/respaldos/
+
+# Fotos crudas extraidas de los PDF (no se usan en el dashboard, quedan solo en la PC)
+public/extracted/
+public/extracted_egresados/
+public/page1_rendered.png
