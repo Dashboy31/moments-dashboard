@@ -7,7 +7,9 @@ import { fileURLToPath } from 'url';
 import {
   MOVIMIENTOS_SEED,
   EVENTOS_SEED,
-  CHECKLIST_INICIAL
+  CHECKLIST_INICIAL,
+  ACTIVIDADES_SEMANA_SEED,
+  USUARIOS
 } from '../src/utils/mockData.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -33,7 +35,7 @@ app.use(express.json({ limit: '5mb' }));
 // ---------------------------------------------------------------------------
 // Base de datos (archivo JSON en disco persistente, escrituras atómicas)
 // ---------------------------------------------------------------------------
-const COLECCIONES = ['eventos', 'checklist', 'movimientos'];
+const COLECCIONES = ['eventos', 'checklist', 'movimientos', 'actividades_semana'];
 
 function dbInicial() {
   return {
@@ -41,7 +43,8 @@ function dbInicial() {
     actualizado: new Date().toISOString(),
     eventos: EVENTOS_SEED,
     checklist: CHECKLIST_INICIAL,
-    movimientos: MOVIMIENTOS_SEED
+    movimientos: MOVIMIENTOS_SEED,
+    actividades_semana: ACTIVIDADES_SEMANA_SEED
   };
 }
 
@@ -51,6 +54,9 @@ function cargarDb() {
     try {
       const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
       for (const c of COLECCIONES) if (!Array.isArray(data[c])) data[c] = [];
+      if (!Array.isArray(data.actividades_semana) || data.actividades_semana.length === 0) {
+        data.actividades_semana = ACTIVIDADES_SEMANA_SEED;
+      }
       if (typeof data.version !== 'number') data.version = 1;
       return data;
     } catch (e) {
@@ -113,13 +119,49 @@ function datosPublicos() {
     version: db.version,
     actualizado: db.actualizado,
     eventos: db.eventos,
-    checklist: db.checklist
+    checklist: db.checklist,
+    actividades_semana: db.actividades_semana || []
   };
 }
 
 // ---------------------------------------------------------------------------
 // API
 // ---------------------------------------------------------------------------
+
+// Login de usuario con perfil + contraseña
+app.post('/api/auth/login', (req, res) => {
+  const { usuarioId, password } = req.body || {};
+  const usuario = USUARIOS.find(u => u.id === usuarioId);
+  if (!usuario) {
+    return res.status(404).json({ ok: false, error: 'Usuario no encontrado' });
+  }
+  if (String(password || '').trim() !== String(usuario.password || '123').trim()) {
+    return res.status(401).json({ ok: false, error: 'Contraseña incorrecta' });
+  }
+  return res.json({
+    ok: true,
+    usuario: {
+      id: usuario.id,
+      nombre: usuario.nombre,
+      rol: usuario.rol,
+      badge: usuario.badge,
+      color: usuario.color,
+      avatar_color: usuario.avatar_color
+    }
+  });
+});
+
+// Lista pública de usuarios para la pantalla de inicio de sesión
+app.get('/api/usuarios', (req, res) => {
+  res.json(USUARIOS.map(u => ({
+    id: u.id,
+    nombre: u.nombre,
+    rol: u.rol,
+    badge: u.badge,
+    color: u.color,
+    avatar_color: u.avatar_color
+  })));
+});
 
 // Estado del servidor (sirve para verificar que el disco persistente está bien conectado)
 app.get('/api/health', (req, res) => {
@@ -177,7 +219,85 @@ function rutasColeccion(nombre, protegida = false) {
 
 rutasColeccion('eventos');
 rutasColeccion('checklist');
+rutasColeccion('actividades_semana');
 rutasColeccion('movimientos', true);
+
+// Confirmar asistencia a reunión
+app.post('/api/actividades_semana/:id/confirmar', (req, res) => {
+  const { usuarioId, confirmada = true } = req.body || {};
+  const actividad = (db.actividades_semana || []).find(a => String(a.id) === String(req.params.id));
+  if (!actividad) return res.status(404).json({ error: 'Actividad no encontrada' });
+
+  if (!Array.isArray(actividad.participantes)) actividad.participantes = [];
+  const ahora = new Date();
+  const fechaHoraStr = `${ahora.toISOString().slice(0, 10)} ${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
+
+  const pIdx = actividad.participantes.findIndex(p => p.usuarioId === usuarioId);
+  if (pIdx >= 0) {
+    actividad.participantes[pIdx].confirmada = Boolean(confirmada);
+    actividad.participantes[pIdx].fechaConfirmacion = confirmada ? fechaHoraStr : null;
+  } else {
+    const u = USUARIOS.find(usr => usr.id === usuarioId);
+    actividad.participantes.push({
+      usuarioId,
+      nombre: u ? u.nombre : usuarioId,
+      rol: u ? u.rol : '',
+      confirmada: Boolean(confirmada),
+      fechaConfirmacion: confirmada ? fechaHoraStr : null
+    });
+  }
+
+  guardar();
+  res.json({ ok: true, version: db.version, actividad });
+});
+
+// Pagar a proveedor (impacto automático en Caja Variable)
+app.post('/api/actividades_semana/:id/pagar', (req, res) => {
+  const { pagado, responsable } = req.body || {};
+  const actividad = (db.actividades_semana || []).find(a => String(a.id) === String(req.params.id));
+  if (!actividad) return res.status(404).json({ error: 'Actividad no encontrada' });
+
+  const nuevoEstado = Boolean(pagado);
+  actividad.pagado = nuevoEstado;
+  if (responsable) actividad.responsablePago = responsable;
+
+  const movId = actividad.movimientoCajaId || `mov-prov-${actividad.id}`;
+
+  if (nuevoEstado) {
+    // Impacta automáticamente en la Caja Variable
+    actividad.movimientoCajaId = movId;
+    if (!Array.isArray(db.movimientos)) db.movimientos = [];
+    const idxMov = db.movimientos.findIndex(m => String(m.id) === String(movId));
+    const movData = {
+      id: movId,
+      fecha: actividad.fecha || new Date().toISOString().slice(0, 10),
+      concepto: `[Pago Proveedor] ${actividad.titulo}`,
+      tipo: 'egreso',
+      categoria: 'Variables',
+      subcategoria: 'Proveedores de evento',
+      monto: Number(actividad.monto) || 0,
+      metodoPago: 'Transferencia',
+      cargo: responsable || actividad.responsablePago || actividad.creadorNombre || 'Administración',
+      notas: `Pago automático registrado desde Semana & Acciones (${actividad.proveedor || 'Proveedor'})`
+    };
+    if (idxMov >= 0) db.movimientos[idxMov] = movData;
+    else db.movimientos.unshift(movData);
+  } else {
+    // Si se desmarca, se retira de la caja
+    if (actividad.movimientoCajaId) {
+      db.movimientos = (db.movimientos || []).filter(m => String(m.id) !== String(actividad.movimientoCajaId));
+      actividad.movimientoCajaId = null;
+    }
+  }
+
+  guardar();
+  res.json({
+    ok: true,
+    version: db.version,
+    actividad,
+    movimientos: db.movimientos
+  });
+});
 
 // Descargar respaldo completo (incluye Caja, por eso pide PIN)
 app.get('/api/respaldo', (req, res) => {

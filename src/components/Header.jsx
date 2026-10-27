@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
+  Calendar,
   Wallet, 
   CalendarDays, 
   CheckSquare, 
@@ -8,7 +9,11 @@ import {
   Unlock, 
   UserCircle2, 
   Image as ImageIcon,
-  ChevronDown
+  ChevronDown,
+  LogOut,
+  Sparkles,
+  Users,
+  ShieldCheck
 } from 'lucide-react';
 import { USUARIOS } from '../utils/mockData';
 import MomentsLogo from './MomentsLogo';
@@ -21,19 +26,33 @@ export default function Header({
   onBloquearCaja,
   usuarioActivo,
   setUsuarioActivo,
+  onLogout,
   fondoActual,
-  setFondoActual
+  setFondoActual,
+  conexion = 'ok'
 }) {
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+
   const tabs = [
     {
+      id: 'semana',
+      number: '1',
+      label: 'Semana & Acciones',
+      shortLabel: 'Semana',
+      icon: Calendar,
+      protegido: false
+    },
+    {
       id: 'caja',
-      label: 'Ingresos y Gastos',
+      number: '2',
+      label: 'Caja (Ingresos y Gastos)',
       shortLabel: 'Caja',
       icon: Wallet,
       protegido: true
     },
     {
       id: 'calendario',
+      number: '3',
       label: 'Calendario de Eventos',
       shortLabel: 'Calendario',
       icon: CalendarDays,
@@ -41,6 +60,7 @@ export default function Header({
     },
     {
       id: 'checklist',
+      number: '4',
       label: 'Checklist de Logística',
       shortLabel: 'Checklist',
       icon: CheckSquare,
@@ -48,8 +68,9 @@ export default function Header({
     },
     {
       id: 'marketing',
-      label: 'Tarifario, Menú y Ventas',
-      shortLabel: 'Ventas & Menú',
+      number: '5',
+      label: 'Tarifario & Ventas',
+      shortLabel: 'Ventas',
       icon: TrendingUp,
       protegido: false
     }
@@ -73,78 +94,36 @@ export default function Header({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-amber-900/10 shadow-sm transition-colors">
-      {/* Barra superior con identidad oficial y acciones */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 flex items-center justify-between gap-3">
+    <header className="sticky top-0 z-40 bg-[#160c18] text-white border-b border-amber-900/30 shadow-xl transition-colors">
+      
+      {/* -------------------------------------------------------------------
+          BARRA SUPERIOR PRINCIPAL (ESTILO MIFA DASHBOARD CON IDENTIDAD MOMENTS)
+         ------------------------------------------------------------------- */}
+      <div className="max-w-[1920px] mx-auto px-3 sm:px-6 py-2.5 flex items-center justify-between gap-3">
         
-        {/* LOGO OFICIAL DE MOMENTS */}
-        <div className="py-1 cursor-pointer" onClick={() => setActiveTab('calendario')}>
-          <MomentsLogo variant="header" />
+        {/* LOGO OFICIAL E IDENTIDAD MOMENTS */}
+        <div 
+          className="flex items-center gap-3 cursor-pointer py-0.5 select-none" 
+          onClick={() => setActiveTab('semana')}
+          title="Ir al inicio (Semana & Acciones)"
+        >
+          <div className="bg-white/10 hover:bg-white/15 p-1 rounded-2xl border border-amber-400/30 shadow-sm transition">
+            <MomentsLogo variant="header" />
+          </div>
+          <div className="hidden xl:block">
+            <span className="text-[10px] font-bold text-amber-300 uppercase tracking-widest block">
+              Salón de Eventos Familiar
+            </span>
+            <span className="text-[11px] text-slate-300 font-medium">
+              San Rafael, Mendoza
+            </span>
+          </div>
         </div>
 
-        {/* Acciones del lado derecho: Selector de fondo, estado de Caja y Selector de usuario */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          
-          {/* Selector de Ambiente / Fondo de Salón */}
-          <div className="hidden lg:flex items-center gap-1.5 bg-amber-50/80 border border-amber-200/70 rounded-2xl px-2.5 py-1 text-xs">
-            <ImageIcon className="w-3.5 h-3.5 text-amber-700" />
-            <span className="text-[10px] font-bold text-amber-900/70 uppercase">Ambiente:</span>
-            <select
-              value={fondoActual}
-              onChange={(e) => setFondoActual(e.target.value)}
-              className="bg-transparent font-bold text-amber-950 focus:outline-none cursor-pointer text-xs"
-            >
-              {fondosDisponibles.map(f => (
-                <option key={f.id} value={f.id}>{f.nombre}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Estado de Caja y botón de bloqueo */}
-          {cajaDesbloqueada && (
-            <button
-              onClick={onBloquearCaja}
-              title="Presione para volver a bloquear el acceso a la caja"
-              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 transition-colors shadow-sm"
-            >
-              <Unlock className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="hidden sm:inline">Caja Abierta</span>
-              <span className="text-[10px] bg-emerald-200/60 px-1.5 py-0.5 rounded font-bold">Bloquear</span>
-            </button>
-          )}
-
-          {/* Selector de Usuario Activo */}
-          <div className="relative flex items-center">
-            <div className="flex items-center gap-2 bg-slate-50/90 border border-slate-200 rounded-2xl px-2.5 py-1.5 hover:bg-slate-100 transition-colors">
-              <UserCircle2 className="w-4 h-4 text-slate-500 shrink-0" />
-              <div className="flex flex-col text-left">
-                <span className="text-[9px] text-slate-400 font-bold leading-none hidden sm:inline uppercase">
-                  Operador
-                </span>
-                <select
-                  value={usuarioActivo.id}
-                  onChange={(e) => {
-                    const u = USUARIOS.find(usr => usr.id === e.target.value);
-                    if (u) setUsuarioActivo(u);
-                  }}
-                  className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer pr-1"
-                >
-                  {USUARIOS.map(u => (
-                    <option key={u.id} value={u.id}>
-                      {u.nombre} ({u.badge})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* Pestañas de navegación principal (Responsive) */}
-      <div className="bg-slate-50/80 border-t border-slate-200/60 px-3 sm:px-6">
-        <div className="max-w-7xl mx-auto flex items-center gap-1 sm:gap-2 overflow-x-auto py-1.5 no-scrollbar">
+        {/* -----------------------------------------------------------------
+            PESTAÑAS NUMERADAS CENTRALES (ESTILO MIFA 1-5)
+           ----------------------------------------------------------------- */}
+        <nav className="hidden md:flex items-center gap-1.5 lg:gap-2">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -154,34 +133,200 @@ export default function Header({
               <button
                 key={tab.id}
                 onClick={() => handleTabClick(tab)}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   isActive
-                    ? 'bg-gradient-to-r from-[#7d1728] to-[#911f33] text-white shadow-md shadow-rose-950/20 font-bold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
+                    ? 'bg-gradient-to-r from-[#7d1728] via-[#911f33] to-[#7d1728] text-white shadow-md shadow-rose-950/40 border border-amber-400/40 ring-1 ring-amber-300/30'
+                    : 'text-slate-300 hover:text-white hover:bg-white/10 border border-transparent'
                 }`}
+                title={tab.label}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-amber-200' : 'text-slate-400'}`} />
-                <span className="hidden sm:inline">{tab.label}</span>
-                <span className="sm:hidden">{tab.shortLabel}</span>
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-amber-200' : 'text-slate-400'}`} />
+                <span>{tab.number}. {tab.shortLabel}</span>
 
                 {/* Candado en caja si no está desbloqueada */}
                 {estaProtegido && (
-                  <span className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
-                    isActive ? 'bg-black/25 text-amber-200' : 'bg-slate-200 text-slate-600'
-                  }`}>
+                  <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md font-black bg-amber-400/20 text-amber-200 border border-amber-400/30">
                     <Lock className="w-2.5 h-2.5" />
                     <span>PIN</span>
                   </span>
                 )}
 
                 {tab.id === 'caja' && cajaDesbloqueada && (
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Caja accesible" />
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Caja desbloqueada" />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* -----------------------------------------------------------------
+            LADO DERECHO: AMBIENTE, CAJA Y PERFIL CON AVATAR
+           ----------------------------------------------------------------- */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          
+          {/* Selector de Ambiente / Fondo de Salón */}
+          <div className="hidden lg:flex items-center gap-1.5 bg-[#251528] border border-amber-900/40 rounded-xl px-2.5 py-1 text-xs">
+            <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-[10px] font-bold text-amber-200/80 uppercase">Fondo:</span>
+            <select
+              value={fondoActual}
+              onChange={(e) => setFondoActual(e.target.value)}
+              className="bg-transparent font-bold text-white focus:outline-none cursor-pointer text-xs"
+            >
+              {fondosDisponibles.map(f => (
+                <option key={f.id} value={f.id} className="text-slate-900 bg-white">
+                  {f.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Estado de Caja y botón de bloqueo */}
+          {cajaDesbloqueada && (
+            <button
+              onClick={onBloquearCaja}
+              title="Presione para volver a bloquear el acceso a la caja"
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-xl bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-900 transition-colors shadow-sm cursor-pointer"
+            >
+              <Unlock className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">Caja Abierta</span>
+              <span className="text-[10px] bg-emerald-500/30 text-emerald-200 px-1.5 py-0.2 rounded font-bold">Bloquear</span>
+            </button>
+          )}
+
+          {/* PERFIL DE USUARIO ACTIVO CON AVATAR Y DROPDOWN (ESTILO MIFA) */}
+          <div className="relative">
+            <button
+              onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+              className="flex items-center gap-2 bg-[#251528] hover:bg-[#341d38] px-2.5 py-1.5 rounded-2xl border border-amber-400/30 text-xs font-medium transition cursor-pointer shadow-sm"
+            >
+              {/* Avatar circular con inicial y color oficial */}
+              <div
+                className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-black shadow-sm"
+                style={{ backgroundColor: usuarioActivo?.avatar_color || '#7c3aed' }}
+              >
+                {usuarioActivo?.nombre ? usuarioActivo.nombre.charAt(0) : 'U'}
+              </div>
+
+              {/* Nombre y Cargo */}
+              <div className="text-left hidden sm:block">
+                <div className="text-white font-bold text-xs leading-none">
+                  {usuarioActivo?.nombre || 'Usuario'}
+                </div>
+                <div className="text-[10px] text-amber-200/80 leading-none mt-1 truncate max-w-[130px]">
+                  {usuarioActivo?.rol || 'Equipo'}
+                </div>
+              </div>
+
+              <ChevronDown className="w-3.5 h-3.5 text-amber-300/80 ml-0.5" />
+            </button>
+
+            {/* Menu Desplegable de Usuario */}
+            {userDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-72 bg-[#1b0f1d] border border-amber-500/30 rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150 text-white">
+                
+                <div className="px-3.5 py-2 border-b border-white/10">
+                  <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider block">
+                    Sesión Activa
+                  </span>
+                  <div className="font-bold text-sm text-white mt-0.5">
+                    {usuarioActivo?.nombre}
+                  </div>
+                  <div className="text-xs text-slate-300">
+                    {usuarioActivo?.rol}
+                  </div>
+                </div>
+
+                <div className="px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                  Cambiar Operador Activo:
+                </div>
+
+                <div className="max-h-56 overflow-y-auto">
+                  {USUARIOS.map((u) => (
+                    <button
+                      key={u.id}
+                      onClick={() => {
+                        setUsuarioActivo(u);
+                        setUserDropdownOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3.5 py-2 text-left text-xs transition cursor-pointer ${
+                        usuarioActivo?.id === u.id
+                          ? 'bg-[#7d1728]/40 text-amber-200 font-bold border-l-2 border-amber-400'
+                          : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white font-bold"
+                          style={{ backgroundColor: u.avatar_color }}
+                        >
+                          {u.nombre.charAt(0)}
+                        </div>
+                        <div>
+                          <span className="font-bold">{u.nombre}</span>
+                          <span className="text-[10px] text-slate-400 ml-1.5">({u.badge})</span>
+                        </div>
+                      </div>
+                      {usuarioActivo?.id === u.id && (
+                        <span className="text-[10px] font-bold text-amber-400">Activo</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Cerrar Sesión */}
+                <div className="mt-1 pt-1.5 border-t border-white/10 px-2">
+                  <button
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      if (onLogout) onLogout();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-bold text-rose-300 hover:bg-rose-950/40 hover:text-rose-100 rounded-xl transition cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Cerrar Sesión</span>
+                  </button>
+                </div>
+
+              </div>
+            )}
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* -------------------------------------------------------------------
+          PESTAÑAS MÓVILES (SCROLL HORIZONTAL EN DISPOSITIVOS CHICOS)
+         ------------------------------------------------------------------- */}
+      <div className="md:hidden bg-[#1f1122] border-t border-amber-900/30 px-3 py-1.5 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-1.5">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            const estaProtegido = tab.protegido && !cajaDesbloqueada;
+
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleTabClick(tab)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
+                  isActive
+                    ? 'bg-gradient-to-r from-[#7d1728] to-[#911f33] text-white shadow-sm border border-amber-400/40'
+                    : 'text-slate-300 hover:bg-white/10'
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-amber-200' : 'text-slate-400'}`} />
+                <span>{tab.number}. {tab.shortLabel}</span>
+                {estaProtegido && (
+                  <Lock className="w-2.5 h-2.5 text-amber-300" />
                 )}
               </button>
             );
           })}
         </div>
       </div>
+
     </header>
   );
 }

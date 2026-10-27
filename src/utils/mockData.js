@@ -1,12 +1,13 @@
 // Datos semilla iniciales para Moments - Salón de Eventos (San Rafael, Mendoza)
 
 export const USUARIOS = [
-  { id: 'jesica', nombre: 'Jesica', rol: 'Gerencia General', badge: 'Gerencia', color: 'bg-amber-100 text-amber-800 border-amber-300' },
-  { id: 'leandro', nombre: 'Leandro', rol: 'Dueño', badge: 'Dueño', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
-  { id: 'gabriela', nombre: 'Gabriela', rol: 'Administración', badge: 'Administración', color: 'bg-sky-100 text-sky-800 border-sky-300' },
-  { id: 'pablo', nombre: 'Pablo', rol: 'Ventas y Mantenimiento', badge: 'Ventas / Mant.', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
-  { id: 'joaquina', nombre: 'Joaquina', rol: 'Ventas', badge: 'Ventas', color: 'bg-rose-100 text-rose-800 border-rose-300' },
-  { id: 'paulina', nombre: 'Paulina', rol: 'Logística de Eventos', badge: 'Logística', color: 'bg-purple-100 text-purple-800 border-purple-300' }
+  { id: 'alvaro', nombre: 'Álvaro', rol: 'Estratega Integrador', badge: 'Estrategia', color: 'bg-purple-100 text-purple-900 border-purple-300', avatar_color: '#7c3aed', password: '123' },
+  { id: 'jesica', nombre: 'Jesica', rol: 'Gerencia General', badge: 'Gerencia', color: 'bg-amber-100 text-amber-900 border-amber-300', avatar_color: '#d97706', password: '123' },
+  { id: 'leandro', nombre: 'Leandro', rol: 'Dueño', badge: 'Dueño', color: 'bg-indigo-100 text-indigo-900 border-indigo-300', avatar_color: '#3b82f6', password: '123' },
+  { id: 'gabriela', nombre: 'Gabriela', rol: 'Administración', badge: 'Administración', color: 'bg-sky-100 text-sky-900 border-sky-300', avatar_color: '#0284c7', password: '123' },
+  { id: 'pablo', nombre: 'Pablo', rol: 'Ventas y Mantenimiento', badge: 'Ventas / Mant.', color: 'bg-emerald-100 text-emerald-900 border-emerald-300', avatar_color: '#059669', password: '123' },
+  { id: 'joaquina', nombre: 'Joaquina', rol: 'Ventas', badge: 'Ventas', color: 'bg-rose-100 text-rose-900 border-rose-300', avatar_color: '#e11d48', password: '123' },
+  { id: 'paulina', nombre: 'Paulina', rol: 'Logística de Eventos', badge: 'Logística', color: 'bg-fuchsia-100 text-fuchsia-900 border-fuchsia-300', avatar_color: '#a21caf', password: '123' }
 ];
 
 export const CATEGORIAS_CAJA = {
@@ -758,3 +759,168 @@ export const MATERIALES_VENTAS = [
     icono: 'FileCheck'
   }
 ];
+
+export const ACTIVIDADES_SEMANA_SEED = [
+  {
+    id: 'act-1',
+    tipo: 'reunion',
+    titulo: 'Reunión Estratégica Semanal con Marketing y Ventas',
+    dia: 'Lunes',
+    fecha: '2026-10-26',
+    hora: '10:30',
+    creadorId: 'alvaro',
+    creadorNombre: 'Álvaro',
+    creadorCargo: 'Estratega Integrador',
+    lugar: 'Oficina / Sala de Reuniones Salón',
+    descripcion: 'Revisión de embudo de consultas, tarifas 2027 y contenidos en Instagram para la temporada alta.',
+    participantes: [
+      { usuarioId: 'joaquina', nombre: 'Joaquina', rol: 'Ventas', confirmada: true, fechaConfirmacion: '2026-10-26 09:15' },
+      { usuarioId: 'paulina', nombre: 'Paulina', rol: 'Logística de Eventos', confirmada: false, fechaConfirmacion: null },
+      { usuarioId: 'pablo', nombre: 'Pablo', rol: 'Ventas y Mantenimiento', confirmada: true, fechaConfirmacion: '2026-10-26 09:40' },
+      { usuarioId: 'jesica', nombre: 'Jesica', rol: 'Gerencia General', confirmada: false, fechaConfirmacion: null }
+    ],
+    proveedor: null,
+    monto: null,
+    pagado: false,
+    responsablePago: null,
+    movimientoCajaId: null,
+    completada: false,
+    responsableTarea: null
+  },
+  {
+    id: 'act-2',
+    tipo: 'pago_proveedor',
+    titulo: 'Pago mantenimiento parque y rosales - Don Carlos',
+    dia: 'Martes',
+    fecha: '2026-10-27',
+    hora: '11:00',
+    creadorId: 'pablo',
+    creadorNombre: 'Pablo',
+    creadorCargo: 'Ventas y Mantenimiento',
+    lugar: 'Parque Salón',
+    descripcion: 'Poda, bordeado de canteros y puesta a punto de los rosales para el evento del sábado.',
+    participantes: [],
+    proveedor: 'Don Carlos (Jardinería y Riego)',
+    monto: 160000,
+    pagado: true,
+    responsablePago: 'Pablo',
+    movimientoCajaId: 'mov-8',
+    completada: true,
+    responsableTarea: null
+  },
+  {
+    id: 'act-3',
+    tipo: 'reunion',
+    titulo: 'Coordinación Operativa Fiesta de 15 de Federica',
+    dia: 'Miércoles',
+    fecha: '2026-10-28',
+    hora: '17:00',
+    creadorId: 'paulina',
+    creadorNombre: 'Paulina',
+    creadorCargo: 'Logística de Eventos',
+    lugar: 'Salón Principal y Pista',
+    descripcion: 'Repaso de tiempos de tanda de baile, entrada de la quinceañera, mozos y chequeo de sonido con DJ.',
+    participantes: [
+      { usuarioId: 'paulina', nombre: 'Paulina', rol: 'Logística de Eventos', confirmada: true, fechaConfirmacion: '2026-10-27 11:20' },
+      { usuarioId: 'pablo', nombre: 'Pablo', rol: 'Ventas y Mantenimiento', confirmada: false, fechaConfirmacion: null },
+      { usuarioId: 'jesica', nombre: 'Jesica', rol: 'Gerencia General', confirmada: true, fechaConfirmacion: '2026-10-27 14:05' },
+      { usuarioId: 'gabriela', nombre: 'Gabriela', rol: 'Administración', confirmada: false, fechaConfirmacion: null }
+    ],
+    proveedor: null,
+    monto: null,
+    pagado: false,
+    responsablePago: null,
+    movimientoCajaId: null,
+    completada: false,
+    responsableTarea: null
+  },
+  {
+    id: 'act-4',
+    tipo: 'pago_proveedor',
+    titulo: 'Seña sonido e iluminación robotizada DJ Cuyo Pro',
+    dia: 'Jueves',
+    fecha: '2026-10-29',
+    hora: '15:30',
+    creadorId: 'jesica',
+    creadorNombre: 'Jesica',
+    creadorCargo: 'Gerencia General',
+    lugar: 'Transferencia Bancaria',
+    descripcion: 'Anticipo contractual para luces móviles y efectos especiales para los 15 del fin de semana.',
+    participantes: [],
+    proveedor: 'DJ Cuyo Pro (Sonido & Iluminación)',
+    monto: 320000,
+    pagado: false,
+    responsablePago: 'Jesica',
+    movimientoCajaId: null,
+    completada: false,
+    responsableTarea: null
+  },
+  {
+    id: 'act-5',
+    tipo: 'pago_proveedor',
+    titulo: 'Carnicería y fiambres Don Pedro (Catering Sábado)',
+    dia: 'Viernes',
+    fecha: '2026-10-30',
+    hora: '11:00',
+    creadorId: 'gabriela',
+    creadorNombre: 'Gabriela',
+    creadorCargo: 'Administración',
+    lugar: 'Pago en Salón / Repartidor',
+    descripcion: 'Cortes para mesa de recepción y plato principal (160 personas confirmadas).',
+    participantes: [],
+    proveedor: 'Distribuidora Carnes Don Pedro',
+    monto: 450000,
+    pagado: false,
+    responsablePago: 'Gabriela',
+    movimientoCajaId: null,
+    completada: false,
+    responsableTarea: null
+  },
+  {
+    id: 'act-6',
+    tipo: 'tarea_operativa',
+    titulo: 'Recepción de bebidas, vinos y 15 bolsas de hielo',
+    dia: 'Viernes',
+    fecha: '2026-10-30',
+    hora: '18:00',
+    creadorId: 'paulina',
+    creadorNombre: 'Paulina',
+    creadorCargo: 'Logística de Eventos',
+    lugar: 'Cámara de frío y quincho',
+    descripcion: 'Cargar heladeras y freezers del salón y quincho con gaseosas, hielo y espumantes.',
+    participantes: [],
+    proveedor: null,
+    monto: null,
+    pagado: false,
+    responsablePago: null,
+    movimientoCajaId: null,
+    completada: false,
+    responsableTarea: 'Paulina'
+  },
+  {
+    id: 'act-7',
+    tipo: 'reunion',
+    titulo: 'Cierre de Caja y Balance Semanal',
+    dia: 'Domingo',
+    fecha: '2026-11-01',
+    hora: '19:00',
+    creadorId: 'jesica',
+    creadorNombre: 'Jesica',
+    creadorCargo: 'Gerencia General',
+    lugar: 'Llamada Virtual / Oficina',
+    descripcion: 'Revisión final de cobros de señas, balance neto del fin de semana y retiros planificados.',
+    participantes: [
+      { usuarioId: 'jesica', nombre: 'Jesica', rol: 'Gerencia General', confirmada: true, fechaConfirmacion: '2026-10-27 15:00' },
+      { usuarioId: 'leandro', nombre: 'Leandro', rol: 'Dueño', confirmada: false, fechaConfirmacion: null },
+      { usuarioId: 'alvaro', nombre: 'Álvaro', rol: 'Estratega Integrador', confirmada: true, fechaConfirmacion: '2026-10-27 15:10' }
+    ],
+    proveedor: null,
+    monto: null,
+    pagado: false,
+    responsablePago: null,
+    movimientoCajaId: null,
+    completada: false,
+    responsableTarea: null
+  }
+];
+
