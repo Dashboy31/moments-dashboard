@@ -387,18 +387,18 @@ export default function App() {
   return (
     <div className="relative min-h-screen flex flex-col font-['Plus_Jakarta_Sans',sans-serif] pb-20 sm:pb-8 text-slate-800">
       
-      {/* FONDO AMBIENTAL DE SALÓN DE EVENTOS */}
+      {/* FONDO AMBIENTAL DE SALÓN DE EVENTOS (NUEVA ESTÉTICA BRANDBOOK: VERDE BOSQUE, ORO & CREMA) */}
       {fondoUrl ? (
         <div 
           className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat transition-all duration-700 pointer-events-none"
           style={{ backgroundImage: `url(${fondoUrl})` }}
         >
-          {/* Capa de iluminación y viñeta de gala para máxima legibilidad */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#180a12]/85 via-[#12080f]/88 to-[#0a0408]/92 backdrop-blur-[2px]" />
-          <div className="absolute inset-0 bg-radial-gradient from-amber-500/10 via-transparent to-black/60" />
+          {/* Capa de iluminación botánica y gala: Verde Bosque profundo con viñeta dorada cálida */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#1C251B]/90 via-[#232C1E]/88 to-[#161D13]/94 backdrop-blur-[2px]" />
+          <div className="absolute inset-0 bg-radial-gradient from-[#C6A96A]/15 via-transparent to-black/70" />
         </div>
       ) : (
-        <div className="fixed inset-0 z-0 bg-[#f9f6f0] pointer-events-none" />
+        <div className="fixed inset-0 z-0 bg-[#F6F3E9] pointer-events-none" />
       )}
 
       {/* Contenedor relativo sobre el fondo */}
@@ -459,19 +459,19 @@ export default function App() {
                 usuarioActivo={usuarioActivo}
               />
             ) : (
-              <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-10 text-center max-w-md mx-auto shadow-2xl border border-amber-200">
-                <div className="w-16 h-16 bg-[#7d1728]/10 text-[#7d1728] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#7d1728]/20">
-                  <Lock className="w-8 h-8" />
+              <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-10 text-center max-w-md mx-auto shadow-2xl border border-[#C6A96A]/40">
+                <div className="w-16 h-16 bg-[#2F3A2A]/10 text-[#2F3A2A] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#C6A96A]/30">
+                  <Lock className="w-8 h-8 text-[#C6A96A]" />
                 </div>
-                <h2 className="text-xl font-black text-slate-900">Caja Gerencial Protegida</h2>
+                <h2 className="text-xl font-black text-slate-900 font-['Playfair_Display']">Caja Gerencial Protegida</h2>
                 <p className="text-xs text-slate-500 mt-1 mb-5">
                   Ingresá el PIN de seguridad de Gerencia (Jesica y Leandro) para acceder a los números y retiros.
                 </p>
                 <button
                   onClick={handleOpenPinModal}
-                  className="px-6 py-2.5 bg-gradient-to-r from-[#7d1728] to-[#9c2037] hover:from-[#6b1422] hover:to-[#881a2e] text-white text-xs font-black rounded-2xl shadow-lg transition-all active:scale-95 cursor-pointer"
+                  className="px-6 py-2.5 bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] text-xs font-black rounded-2xl shadow-lg border border-[#C6A96A] transition-all active:scale-95 cursor-pointer font-['Montserrat']"
                 >
-                  Ingresar PIN de Gerencia
+                  Ingresar PIN de Gerencia (1234)
                 </button>
               </div>
             )
@@ -510,35 +510,40 @@ export default function App() {
         </main>
 
         {/* Footer Oficial con Datos de Contacto de Moments */}
-        <footer className="mt-auto border-t border-white/10 bg-black/40 backdrop-blur-md py-5 text-center text-xs text-slate-300">
+        <footer className="mt-auto border-t border-[#C6A96A]/20 bg-[#1E251B]/90 backdrop-blur-md py-5 text-center text-xs text-slate-300">
           <div className="max-w-4xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-xl font-bold text-amber-200" style={{ fontFamily: "'Great Vibes', cursive" }}>
+              <span className="text-xl font-bold text-[#C6A96A]" style={{ fontFamily: "'Great Vibes', cursive" }}>
                 Moment's
               </span>
-              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                · San Rafael, Mendoza
+              <span className="text-[10px] uppercase font-bold text-[#A5B29B] tracking-wider font-['Montserrat']">
+                · Salón de Eventos · San Rafael, Mendoza
               </span>
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-slate-300">
-              <span className="flex items-center gap-1.5 hover:text-amber-300 transition-colors">
-                <Instagram className="w-3.5 h-3.5 text-pink-400" />
-                <span>@moments.tulugar</span>
+              <a 
+                href="https://instagram.com/moments.tu.lugar" 
+                target="_blank" 
+                rel="noreferrer"
+                className="flex items-center gap-1.5 text-[#E8EDE3] hover:text-[#C6A96A] transition-colors"
+              >
+                <Instagram className="w-3.5 h-3.5 text-[#C6A96A]" />
+                <span>@moments.tu.lugar</span>
+              </a>
+              <span>•</span>
+              <span className="flex items-center gap-1.5 text-[#E8EDE3]">
+                <Phone className="w-3.5 h-3.5 text-[#C6A96A]" />
+                <span>2604-600657 (WhatsApp)</span>
               </span>
               <span>•</span>
-              <span className="flex items-center gap-1.5 hover:text-amber-300 transition-colors">
-                <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                <span>2604-001122 (Ventas)</span>
-              </span>
-              <span>•</span>
-              <span className="text-slate-400">
-                Puesta en marcha v2.0
+              <span className="text-[#A5B29B]">
+                Gestión Centralizada
               </span>
             </div>
 
-            <div className="text-[11px] text-slate-400">
-              © {new Date().getFullYear()} Moments · Salón de Eventos
+            <div className="text-[11px] text-[#A5B29B]">
+              © {new Date().getFullYear()} Moment's · Salón de Eventos
             </div>
           </div>
         </footer>

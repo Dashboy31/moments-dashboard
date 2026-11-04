@@ -201,25 +201,25 @@ export default function CalendarioView({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-2xl font-bold text-[#2F3A2A] font-serif tracking-tight">
               Calendario del Salón
             </h1>
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#2F3A2A]/10 text-[#2F3A2A] border border-[#5A6B4A]/30 font-['Montserrat']">
               Fiestas y Operaciones
             </span>
           </div>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-500 mt-0.5 font-['Montserrat']">
             Vista unificada de fiestas, reservas comerciales y cronograma de mantenimiento (jardinero, proveedores).
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           {/* Alternar Vista: Calendario vs Lista */}
-          <div className="flex items-center bg-white p-1 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="flex items-center bg-white p-1 rounded-2xl border border-[#E3DCCE] shadow-sm">
             <button
               onClick={() => setVistaModo('mes')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                vistaModo === 'mes' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer font-['Montserrat'] ${
+                vistaModo === 'mes' ? 'bg-[#2F3A2A] text-[#F6F3E9] shadow-sm' : 'text-slate-600 hover:text-[#2F3A2A]'
               }`}
             >
               <CalendarIcon className="w-3.5 h-3.5" />
@@ -227,8 +227,8 @@ export default function CalendarioView({
             </button>
             <button
               onClick={() => setVistaModo('lista')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                vistaModo === 'lista' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer font-['Montserrat'] ${
+                vistaModo === 'lista' ? 'bg-[#2F3A2A] text-[#F6F3E9] shadow-sm' : 'text-slate-600 hover:text-[#2F3A2A]'
               }`}
             >
               <List className="w-3.5 h-3.5" />
@@ -239,40 +239,40 @@ export default function CalendarioView({
           {/* Botón Nuevo Evento */}
           <button
             onClick={() => setModalAbierto(true)}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-black rounded-2xl bg-amber-600 hover:bg-amber-700 text-white shadow-md shadow-amber-900/10 transition-all active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] border border-[#C6A96A]/60 hover:border-[#C6A96A] shadow-md shadow-[#2F3A2A]/20 transition-all active:scale-95 font-['Montserrat'] cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 text-[#C6A96A]" />
             <span>+ Cargar Evento / Mantenimiento</span>
           </button>
         </div>
       </div>
 
       {/* Barra de Filtros y Navegación de Mes */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl shadow-soft border border-moments-border">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl shadow-soft border border-[#E3DCCE]">
         
         {/* Filtros de Categoría */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 font-['Montserrat']">
           <button
             onClick={() => setFiltroCategoria('todos')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-              filtroCategoria === 'todos' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+              filtroCategoria === 'todos' ? 'bg-[#2F3A2A] text-[#F6F3E9]' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
             Todos los Eventos
           </button>
           <button
             onClick={() => setFiltroCategoria('eventos')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-              filtroCategoria === 'eventos' ? 'bg-pink-600 text-white' : 'bg-pink-50 text-pink-800 hover:bg-pink-100'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+              filtroCategoria === 'eventos' ? 'bg-[#5A6B4A] text-[#F6F3E9]' : 'bg-[#5A6B4A]/10 text-[#5A6B4A] hover:bg-[#5A6B4A]/20'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <Sparkles className="w-3.5 h-3.5 text-[#C6A96A]" />
             <span>Solo Fiestas (15, Bodas, Egresados)</span>
           </button>
           <button
             onClick={() => setFiltroCategoria('mantenimiento')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-              filtroCategoria === 'mantenimiento' ? 'bg-emerald-700 text-white' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+              filtroCategoria === 'mantenimiento' ? 'bg-[#C6A96A] text-[#1E251B]' : 'bg-amber-50 text-amber-900 hover:bg-amber-100'
             }`}
           >
             <Wrench className="w-3.5 h-3.5" />
@@ -668,7 +668,7 @@ export default function CalendarioView({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-black bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-md transition-all active:scale-95"
+                  className="px-5 py-2.5 text-xs font-bold bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] border border-[#C6A96A]/60 hover:border-[#C6A96A] rounded-xl shadow-md transition-all active:scale-95 cursor-pointer font-['Montserrat']"
                 >
                   Guardar en Calendario
                 </button>

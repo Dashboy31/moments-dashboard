@@ -297,22 +297,22 @@ export default function SemanaAccionesView({
         </div>
 
         {/* KPI 5: Fiesta del Fin de Semana */}
-        <div className="bg-gradient-to-br from-[#7d1728]/10 via-amber-500/10 to-purple-950/10 bg-white/95 backdrop-blur-xl rounded-2xl border border-amber-300 p-4 shadow-sm hover:shadow-md transition">
+        <div className="bg-gradient-to-br from-[#2F3A2A]/10 via-[#C6A96A]/10 to-[#5A6B4A]/10 bg-white/95 backdrop-blur-xl rounded-2xl border border-[#C6A96A]/40 p-4 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-[11px] font-black uppercase tracking-wider text-[#7d1728]">
+            <span className="text-[11px] font-black uppercase tracking-wider text-[#2F3A2A] font-['Montserrat']">
               Evento del Sábado
             </span>
-            <div className="w-8 h-8 rounded-xl bg-[#7d1728] text-amber-200 flex items-center justify-center font-bold shadow-sm">
+            <div className="w-8 h-8 rounded-xl bg-[#2F3A2A] text-[#C6A96A] flex items-center justify-center font-bold shadow-sm border border-[#C6A96A]/30">
               <Sparkles className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-base font-black text-slate-900 truncate" title="15 de Federica Morales">
+          <div className="text-base font-black text-slate-900 truncate font-['Playfair_Display']" title="15 de Federica Morales">
             15 de Federica Morales
           </div>
           <div className="text-xs text-slate-600 font-semibold mt-0.5">
             160 invitados · 20:30 hs
           </div>
-          <div className="mt-1.5 flex items-center gap-1 text-[10px] font-bold text-amber-900 bg-amber-100/80 px-2 py-0.5 rounded-md border border-amber-300 w-fit">
+          <div className="mt-1.5 flex items-center gap-1 text-[10px] font-bold text-[#2F3A2A] bg-[#E8EDE3] px-2 py-0.5 rounded-md border border-[#5A6B4A]/30 w-fit">
             <span>👑 Salón + Pista</span>
           </div>
         </div>
@@ -322,16 +322,16 @@ export default function SemanaAccionesView({
       {/* =====================================================================
           2. BARRA DE CONTROL DE LA SEMANA Y FILTROS DIDÁCTICOS
          ===================================================================== */}
-      <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-amber-200/70 p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-[#C6A96A]/30 p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
         
         {/* Título de la semana */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-[#7d1728]/10 text-[#7d1728] flex items-center justify-center shrink-0 border border-[#7d1728]/20">
-            <Calendar className="w-5 h-5 text-[#7d1728]" />
+          <div className="w-10 h-10 rounded-2xl bg-[#2F3A2A]/10 text-[#2F3A2A] flex items-center justify-center shrink-0 border border-[#C6A96A]/30">
+            <Calendar className="w-5 h-5 text-[#2F3A2A]" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-black text-slate-900">
+              <h2 className="text-base font-black text-slate-900 font-['Playfair_Display']">
                 Semana Operativa · 26 Oct al 01 Nov 2026
               </h2>
               <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-300">
@@ -386,9 +386,9 @@ export default function SemanaAccionesView({
           {/* Botón "+ Nueva Actividad / Reunión" */}
           <button
             onClick={handleAbrirModal}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#7d1728] to-[#911f33] hover:from-[#6b1422] hover:to-[#7d1728] text-white font-black text-xs rounded-xl shadow-md shadow-rose-950/20 transition-all active:scale-95 cursor-pointer shrink-0"
+            className="flex items-center gap-2 px-4 py-2 bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] border border-[#C6A96A]/60 hover:border-[#C6A96A] font-bold text-xs rounded-xl shadow-md shadow-[#2F3A2A]/20 transition-all active:scale-95 cursor-pointer shrink-0 font-['Montserrat']"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 text-[#C6A96A]" />
             <span>+ Nueva Actividad / Reunión</span>
           </button>
 
@@ -689,16 +689,16 @@ export default function SemanaAccionesView({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
           <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-amber-300 p-6 animate-in fade-in zoom-in-95 duration-200 text-slate-800 my-8">
             
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-[#7d1728]/10 text-[#7d1728] flex items-center justify-center font-bold">
-                  <Plus className="w-5 h-5 text-[#7d1728]" />
+            <div className="flex items-center justify-between pb-3 border-b border-[#E3DCCE] mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#2F3A2A] text-[#C6A96A] border border-[#C6A96A]/40 flex items-center justify-center font-bold">
+                  <Plus className="w-5 h-5 text-[#C6A96A]" />
                 </div>
                 <div>
-                  <h3 className="font-black text-base text-slate-900">
+                  <h3 className="font-bold text-base text-[#2F3A2A] font-serif">
                     Nueva Actividad de la Semana
                   </h3>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[11px] text-slate-500 font-['Montserrat']">
                     Agendá reuniones con el equipo o pagos a proveedores.
                   </p>
                 </div>
@@ -956,7 +956,7 @@ export default function SemanaAccionesView({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#7d1728] to-[#911f33] hover:from-[#6b1422] hover:to-[#7d1728] text-white font-black shadow-md cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] border border-[#C6A96A]/60 hover:border-[#C6A96A] font-bold shadow-md cursor-pointer transition-all font-['Montserrat']"
                 >
                   Guardar Actividad
                 </button>

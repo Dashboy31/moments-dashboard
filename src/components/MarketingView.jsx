@@ -24,7 +24,9 @@ import {
   ShieldCheck,
   CheckCircle2,
   Flame,
-  Award
+  Award,
+  Palette,
+  BookOpen
 } from 'lucide-react';
 import { GUIONES_VENTAS, CONSULTAS_PIPELINE_SEED, USUARIOS } from '../utils/mockData';
 import MomentsLogo from './MomentsLogo';
@@ -227,27 +229,27 @@ ${calcOpcionDulce !== 'ninguno' ? `• Opcional contratado (${calcOpcionDulce ==
       
       {/* Encabezado con selector de sub-sección */}
       <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 shadow-soft border border-moments-border">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#E3DCCE]">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-2xl font-bold text-[#2F3A2A] font-serif tracking-tight">
                 Tarifario, Menú y Ventas
               </h1>
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-                Oficial Moments
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#2F3A2A]/10 text-[#2F3A2A] border border-[#5A6B4A]/30 font-['Montserrat']">
+                Oficial Moment's
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Tarifas vigentes, cotizador instantáneo de tarjetas, carta gastronómica completa y pipeline comercial.
+            <p className="text-xs text-slate-500 mt-0.5 font-['Montserrat']">
+              Tarifas vigentes, cotizador instantáneo de tarjetas, carta gastronómica completa, identidad de marca y pipeline comercial.
             </p>
           </div>
 
           <div className="flex items-center gap-2 self-start md:self-auto">
             <button
               onClick={() => setModalNuevaConsulta(true)}
-              className="flex items-center gap-2 px-4 py-2 text-xs font-black rounded-2xl bg-[#7d1728] hover:bg-[#681321] text-white shadow-md shadow-rose-950/20 transition-all active:scale-95"
+              className="flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] border border-[#C6A96A]/60 hover:border-[#C6A96A] shadow-md shadow-[#2F3A2A]/20 transition-all active:scale-95 font-['Montserrat'] cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 text-[#C6A96A]" />
               <span>+ Registrar Consulta</span>
             </button>
           </div>
@@ -257,61 +259,73 @@ ${calcOpcionDulce !== 'ninguno' ? `• Opcional contratado (${calcOpcionDulce ==
         <div className="flex items-center gap-1.5 overflow-x-auto pt-3 no-scrollbar">
           <button
             onClick={() => setSubTab('calculadora')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap font-['Montserrat'] cursor-pointer ${
               subTab === 'calculadora' 
-                ? 'bg-[#7d1728] text-white shadow-sm' 
-                : 'text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100'
+                ? 'bg-[#2F3A2A] text-[#F6F3E9] border border-[#C6A96A]/60 shadow-sm' 
+                : 'text-slate-600 hover:text-[#2F3A2A] bg-white/70 hover:bg-white border border-[#E3DCCE]'
             }`}
           >
-            <Calculator className="w-4 h-4 text-amber-300" />
+            <Calculator className={`w-4 h-4 ${subTab === 'calculadora' ? 'text-[#C6A96A]' : 'text-slate-400'}`} />
             <span>Cotizador Oficial de Presupuestos</span>
           </button>
 
           <button
             onClick={() => setSubTab('menu')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap font-['Montserrat'] cursor-pointer ${
               subTab === 'menu' 
-                ? 'bg-[#7d1728] text-white shadow-sm' 
-                : 'text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100'
+                ? 'bg-[#2F3A2A] text-[#F6F3E9] border border-[#C6A96A]/60 shadow-sm' 
+                : 'text-slate-600 hover:text-[#2F3A2A] bg-white/70 hover:bg-white border border-[#E3DCCE]'
             }`}
           >
-            <Utensils className="w-4 h-4 text-amber-300" />
+            <Utensils className={`w-4 h-4 ${subTab === 'menu' ? 'text-[#C6A96A]' : 'text-slate-400'}`} />
             <span>Carta Gastronómica Completa</span>
           </button>
 
           <button
             onClick={() => setSubTab('guiones')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap font-['Montserrat'] cursor-pointer ${
               subTab === 'guiones' 
-                ? 'bg-[#7d1728] text-white shadow-sm' 
-                : 'text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100'
+                ? 'bg-[#2F3A2A] text-[#F6F3E9] border border-[#C6A96A]/60 shadow-sm' 
+                : 'text-slate-600 hover:text-[#2F3A2A] bg-white/70 hover:bg-white border border-[#E3DCCE]'
             }`}
           >
-            <MessageSquare className="w-4 h-4 text-amber-300" />
+            <MessageSquare className={`w-4 h-4 ${subTab === 'guiones' ? 'text-[#C6A96A]' : 'text-slate-400'}`} />
             <span>Guiones de WhatsApp</span>
           </button>
 
           <button
             onClick={() => setSubTab('galeria')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap font-['Montserrat'] cursor-pointer ${
               subTab === 'galeria' 
-                ? 'bg-[#7d1728] text-white shadow-sm' 
-                : 'text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100'
+                ? 'bg-[#2F3A2A] text-[#F6F3E9] border border-[#C6A96A]/60 shadow-sm' 
+                : 'text-slate-600 hover:text-[#2F3A2A] bg-white/70 hover:bg-white border border-[#E3DCCE]'
             }`}
           >
-            <ImageIcon className="w-4 h-4 text-amber-300" />
+            <ImageIcon className={`w-4 h-4 ${subTab === 'galeria' ? 'text-[#C6A96A]' : 'text-slate-400'}`} />
             <span>Fotos Reales del Salón</span>
           </button>
 
           <button
-            onClick={() => setSubTab('pipeline')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-              subTab === 'pipeline' 
-                ? 'bg-[#7d1728] text-white shadow-sm' 
-                : 'text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100'
+            onClick={() => setSubTab('identidad')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap font-['Montserrat'] cursor-pointer ${
+              subTab === 'identidad' 
+                ? 'bg-[#2F3A2A] text-[#F6F3E9] border border-[#C6A96A]/60 shadow-sm' 
+                : 'text-slate-600 hover:text-[#2F3A2A] bg-white/70 hover:bg-white border border-[#E3DCCE]'
             }`}
           >
-            <Users className="w-4 h-4 text-amber-300" />
+            <Palette className={`w-4 h-4 ${subTab === 'identidad' ? 'text-[#C6A96A]' : 'text-slate-400'}`} />
+            <span>Brandbook & Estética Oficial</span>
+          </button>
+
+          <button
+            onClick={() => setSubTab('pipeline')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap font-['Montserrat'] cursor-pointer ${
+              subTab === 'pipeline' 
+                ? 'bg-[#2F3A2A] text-[#F6F3E9] border border-[#C6A96A]/60 shadow-sm' 
+                : 'text-slate-600 hover:text-[#2F3A2A] bg-white/70 hover:bg-white border border-[#E3DCCE]'
+            }`}
+          >
+            <Users className={`w-4 h-4 ${subTab === 'pipeline' ? 'text-[#C6A96A]' : 'text-slate-400'}`} />
             <span>Embudo Comercial ({consultas.length})</span>
           </button>
         </div>
@@ -600,9 +614,9 @@ ${calcOpcionDulce !== 'ninguno' ? `• Opcional contratado (${calcOpcionDulce ==
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
             
             {/* Recepción Fría */}
-            <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/70 flex flex-col justify-between">
+            <div className="p-4 rounded-2xl bg-amber-50/60 border border-[#E3DCCE] flex flex-col justify-between">
               <div>
-                <h3 className="font-black text-sm text-[#7d1728] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <h3 className="font-bold text-sm text-[#2F3A2A] font-serif uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <span>🥖 Recepción Fría</span>
                 </h3>
                 <ul className="space-y-1.5 text-slate-700">
@@ -615,10 +629,10 @@ ${calcOpcionDulce !== 'ninguno' ? `• Opcional contratado (${calcOpcionDulce ==
             </div>
 
             {/* Recepción Caliente */}
-            <div className="p-4 rounded-2xl bg-rose-50/60 border border-rose-200/70 flex flex-col justify-between">
+            <div className="p-4 rounded-2xl bg-amber-50/40 border border-[#E3DCCE] flex flex-col justify-between">
               <div>
-                <h3 className="font-black text-sm text-[#7d1728] uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Flame className="w-4 h-4 text-rose-600" />
+                <h3 className="font-bold text-sm text-[#2F3A2A] font-serif uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Flame className="w-4 h-4 text-[#C6A96A]" />
                   <span>Recepción Caliente</span>
                 </h3>
                 <ul className="space-y-1.5 text-slate-700">
@@ -722,10 +736,10 @@ ${calcOpcionDulce !== 'ninguno' ? `• Opcional contratado (${calcOpcionDulce ==
               <button
                 key={g.id}
                 onClick={() => setGuionActivoId(g.id)}
-                className={`px-4 py-2 rounded-2xl text-xs font-black transition-all whitespace-nowrap shrink-0 ${
+                className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shrink-0 font-['Montserrat'] cursor-pointer ${
                   guionActivoId === g.id
-                    ? 'bg-[#7d1728] text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    ? 'bg-[#2F3A2A] text-[#F6F3E9] border border-[#C6A96A]/60 shadow-sm'
+                    : 'bg-white/80 text-slate-600 hover:text-[#2F3A2A] hover:bg-white border border-[#E3DCCE]'
                 }`}
               >
                 {g.tipo}
@@ -827,7 +841,273 @@ ${calcOpcionDulce !== 'ninguno' ? `• Opcional contratado (${calcOpcionDulce ==
       )}
 
       {/* ============================================================== */}
-      {/* 5. EMBUDO COMERCIAL (PIPELINE) */}
+      {/* 5. BRANDBOOK & IDENTIDAD VISUAL OFICIAL */}
+      {/* ============================================================== */}
+      {subTab === 'identidad' && (
+        <div className="space-y-6">
+          {/* Banner Principal */}
+          <div className="bg-[#2F3A2A] rounded-3xl p-6 md:p-8 border border-[#C6A96A]/40 text-[#F6F3E9] shadow-xl relative overflow-hidden">
+            <div className="absolute -top-12 -right-12 w-64 h-64 bg-[#C6A96A]/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wider uppercase bg-[#C6A96A]/20 text-[#C6A96A] border border-[#C6A96A]/40 mb-3">
+                  <Sparkles className="w-3.5 h-3.5" /> Manual de Marca Oficial · Moment's
+                </span>
+                <h2 className="text-2xl md:text-3xl font-bold font-serif text-[#F6F3E9] tracking-tight">
+                  Identidad Visual & Estética del Salón
+                </h2>
+                <p className="text-xs md:text-sm text-[#E3DCCE]/90 mt-1 max-w-2xl font-['Montserrat'] leading-relaxed">
+                  Guía integral de diseño: paleta de colores botánica y oro, tipografías Playfair y Montserrat, y pilares de comunicación para redes, propuestas comerciales y ambientación física.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 shrink-0">
+                <a
+                  href="/images/brandbook_moments.jpg"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#C6A96A] hover:bg-[#d8bb7a] text-[#1E251B] font-bold text-xs shadow-md transition-all font-['Montserrat']"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>Ver Brandbook en Alta Resolución</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Foto del Brandbook oficial con opción a ampliar */}
+            <div className="lg:col-span-5 bg-white/95 backdrop-blur-xl rounded-3xl p-5 shadow-soft border border-[#E3DCCE] flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-3 border-b border-[#E3DCCE] mb-4">
+                  <h3 className="font-bold text-base text-[#2F3A2A] font-serif flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-[#C6A96A]" />
+                    <span>Lámina Oficial de Marca</span>
+                  </h3>
+                  <span className="text-[11px] text-slate-500 font-bold">Oficial 2026</span>
+                </div>
+
+                <div 
+                  onClick={() => setFotoModal({
+                    url: '/images/brandbook_moments.jpg',
+                    titulo: 'Brandbook Oficial Moment\'s',
+                    desc: 'Identidad corporativa, paleta cromática, logotipo con monograma y tipografías oficiales.'
+                  })}
+                  className="group relative rounded-2xl overflow-hidden border border-[#C6A96A]/40 shadow-md cursor-pointer aspect-[3/4] bg-[#2F3A2A]/5 flex items-center justify-center"
+                >
+                  <img
+                    src="/images/brandbook_moments.jpg"
+                    alt="Brandbook Oficial Moment's"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#1E251B]/80 via-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                    <span className="text-xs font-bold text-[#F6F3E9] flex items-center gap-1.5 bg-[#2F3A2A]/90 px-3 py-1.5 rounded-xl border border-[#C6A96A]/50">
+                      <ImageIcon className="w-3.5 h-3.5 text-[#C6A96A]" /> Clic para ampliar lámina
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-[#E3DCCE] flex items-center justify-between text-xs text-slate-500">
+                <span>Versión aprobada para salón</span>
+                <span className="font-bold text-[#2F3A2A]">San Rafael, Mendoza</span>
+              </div>
+            </div>
+
+            {/* Detalles: Colores, Tipografías, Pilares */}
+            <div className="lg:col-span-7 space-y-6">
+              
+              {/* Paleta Cromática Oficial */}
+              <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 shadow-soft border border-[#E3DCCE]">
+                <h3 className="font-bold text-base text-[#2F3A2A] font-serif mb-3 flex items-center gap-2">
+                  <Palette className="w-5 h-5 text-[#C6A96A]" />
+                  <span>Paleta Cromática Oficial</span>
+                </h3>
+                <p className="text-xs text-slate-600 mb-4 font-['Montserrat']">
+                  Tonos seleccionados para transmitir serenidad botánica de parque, distinción de eventos nocturnos y calidez festiva.
+                </p>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {/* Verde Bosque */}
+                  <div 
+                    onClick={() => {
+                      navigator.clipboard.writeText('#2F3A2A');
+                      setCopiadoId('c-forest');
+                      setTimeout(() => setCopiadoId(null), 1800);
+                    }}
+                    className="group cursor-pointer rounded-2xl border border-slate-200 p-2.5 hover:shadow-md transition-all bg-slate-50 text-center"
+                  >
+                    <div className="h-16 rounded-xl bg-[#2F3A2A] shadow-inner mb-2 flex items-center justify-center text-[#F6F3E9] text-[10px] font-bold">
+                      {copiadoId === 'c-forest' ? '¡Copiado!' : ''}
+                    </div>
+                    <div className="font-bold text-xs text-slate-900">Verde Bosque</div>
+                    <div className="text-[11px] font-mono text-[#5A6B4A] font-bold mt-0.5">#2F3A2A</div>
+                    <div className="text-[10px] text-slate-400 mt-1">Color primario / Cabeceras</div>
+                  </div>
+
+                  {/* Verde Salvia */}
+                  <div 
+                    onClick={() => {
+                      navigator.clipboard.writeText('#5A6B4A');
+                      setCopiadoId('c-sage');
+                      setTimeout(() => setCopiadoId(null), 1800);
+                    }}
+                    className="group cursor-pointer rounded-2xl border border-slate-200 p-2.5 hover:shadow-md transition-all bg-slate-50 text-center"
+                  >
+                    <div className="h-16 rounded-xl bg-[#5A6B4A] shadow-inner mb-2 flex items-center justify-center text-[#F6F3E9] text-[10px] font-bold">
+                      {copiadoId === 'c-sage' ? '¡Copiado!' : ''}
+                    </div>
+                    <div className="font-bold text-xs text-slate-900">Verde Salvia</div>
+                    <div className="text-[11px] font-mono text-[#5A6B4A] font-bold mt-0.5">#5A6B4A</div>
+                    <div className="text-[10px] text-slate-400 mt-1">Secundario / Botánico</div>
+                  </div>
+
+                  {/* Oro Cálido */}
+                  <div 
+                    onClick={() => {
+                      navigator.clipboard.writeText('#C6A96A');
+                      setCopiadoId('c-gold');
+                      setTimeout(() => setCopiadoId(null), 1800);
+                    }}
+                    className="group cursor-pointer rounded-2xl border border-slate-200 p-2.5 hover:shadow-md transition-all bg-slate-50 text-center"
+                  >
+                    <div className="h-16 rounded-xl bg-[#C6A96A] shadow-inner mb-2 flex items-center justify-center text-[#1E251B] text-[10px] font-bold">
+                      {copiadoId === 'c-gold' ? '¡Copiado!' : ''}
+                    </div>
+                    <div className="font-bold text-xs text-slate-900">Oro Cálido</div>
+                    <div className="text-[11px] font-mono text-amber-700 font-bold mt-0.5">#C6A96A</div>
+                    <div className="text-[10px] text-slate-400 mt-1">Acento de Lujo / Monograma</div>
+                  </div>
+
+                  {/* Crema Arena */}
+                  <div 
+                    onClick={() => {
+                      navigator.clipboard.writeText('#F6F3E9');
+                      setCopiadoId('c-cream');
+                      setTimeout(() => setCopiadoId(null), 1800);
+                    }}
+                    className="group cursor-pointer rounded-2xl border border-slate-200 p-2.5 hover:shadow-md transition-all bg-slate-50 text-center"
+                  >
+                    <div className="h-16 rounded-xl bg-[#F6F3E9] border border-[#E3DCCE] shadow-inner mb-2 flex items-center justify-center text-slate-800 text-[10px] font-bold">
+                      {copiadoId === 'c-cream' ? '¡Copiado!' : ''}
+                    </div>
+                    <div className="font-bold text-xs text-slate-900">Crema Arena</div>
+                    <div className="text-[11px] font-mono text-slate-600 font-bold mt-0.5">#F6F3E9</div>
+                    <div className="text-[10px] text-slate-400 mt-1">Fondo / Superficie Cálida</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tipografía Oficial */}
+              <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 shadow-soft border border-[#E3DCCE]">
+                <h3 className="font-bold text-base text-[#2F3A2A] font-serif mb-3 flex items-center gap-2">
+                  <span className="text-lg">Aa</span>
+                  <span>Tipografías de Marca</span>
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-2xl bg-[#F6F3E9] border border-[#E3DCCE]">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#5A6B4A] mb-1">
+                      Tipografía Principal · Títulos
+                    </div>
+                    <div className="text-xl font-bold font-serif text-[#2F3A2A]">
+                      Playfair Display
+                    </div>
+                    <p className="text-xs text-slate-600 mt-2 font-['Montserrat']">
+                      Tipografía serif de alta elegancia clásica y proporciones editoriales. Utilizada en el monograma, títulos principales de presupuestos y logotipos.
+                    </p>
+                    <div className="mt-3 text-xs font-serif italic text-[#C6A96A]">
+                      "Moment's · Donde cada detalle es una celebración"
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-[#F6F3E9] border border-[#E3DCCE]">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#5A6B4A] mb-1">
+                      Tipografía de Lectura · Controles
+                    </div>
+                    <div className="text-xl font-bold font-['Montserrat'] text-[#2F3A2A]">
+                      Montserrat
+                    </div>
+                    <p className="text-xs text-slate-600 mt-2 font-['Montserrat']">
+                      Sans-serif geométrica, moderna y de excelente legibilidad en pantallas y documentos impresos. Utilizada en cuerpos de texto, tablas y botones.
+                    </p>
+                    <div className="mt-3 text-xs font-['Montserrat'] text-slate-700 font-medium">
+                      Recepción · Islas de cocción · Presupuestos · Agenda
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pilares & Datos de Comunicación */}
+              <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 shadow-soft border border-[#E3DCCE]">
+                <h3 className="font-bold text-base text-[#2F3A2A] font-serif mb-3 flex items-center gap-2">
+                  <Award className="w-5 h-5 text-[#C6A96A]" />
+                  <span>Pilares de Marca & Contacto Oficial</span>
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs mb-4">
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                    <div className="font-bold text-[#2F3A2A] mb-1 flex items-center gap-1.5">
+                      <span>🌿</span> Elegancia Natural
+                    </div>
+                    <div className="text-slate-600 text-[11px]">
+                      Parque iluminado, arboleda añeja y detalles dorados para un marco inolvidable.
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                    <div className="font-bold text-[#2F3A2A] mb-1 flex items-center gap-1.5">
+                      <span>🍽️</span> Gastronomía Propia
+                    </div>
+                    <div className="text-slate-600 text-[11px]">
+                      Elaboración propia con cocción en vivo, recepción abundante y barra de tragos.
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                    <div className="font-bold text-[#2F3A2A] mb-1 flex items-center gap-1.5">
+                      <span>💛</span> Calidez Familiar
+                    </div>
+                    <div className="text-slate-600 text-[11px]">
+                      Acompañamiento personal de Jesica, Pablo y equipo en cada momento de la fiesta.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#E3DCCE] text-xs">
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <span className="font-bold text-[#2F3A2A]">Instagram Oficial:</span>
+                    <a 
+                      href="https://instagram.com/moments.tu.lugar" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="font-mono text-[#5A6B4A] hover:underline font-bold"
+                    >
+                      @moments.tu.lugar
+                    </a>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <span className="font-bold text-[#2F3A2A]">WhatsApp Comercial:</span>
+                    <a 
+                      href="https://wa.me/5492604600657" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="font-mono text-[#5A6B4A] hover:underline font-bold"
+                    >
+                      2604-600657
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* 6. EMBUDO COMERCIAL (PIPELINE) */}
       {/* ============================================================== */}
       {subTab === 'pipeline' && (
         <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 shadow-soft border border-moments-border space-y-4">

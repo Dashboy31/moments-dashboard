@@ -76,25 +76,25 @@ export default function PinModal({ isOpen, onClose, onSuccess }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
-      <div className={`bg-white rounded-3xl shadow-modal max-w-sm w-full p-6 text-center border border-amber-100 transition-transform ${error ? 'animate-shake' : ''}`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-fadeIn font-['Montserrat']">
+      <div className={`bg-[#F6F3E9] rounded-3xl shadow-2xl max-w-sm w-full p-6 text-center border border-[#C6A96A]/60 transition-transform ${error ? 'animate-shake' : ''}`}>
         
         {/* Encabezado */}
         <div className="flex justify-end mb-1">
           <button 
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200/50 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-amber-200 text-amber-700 shadow-sm">
-          <Lock className="w-8 h-8" />
+        <div className="w-16 h-16 bg-[#2F3A2A] rounded-2xl flex items-center justify-center mx-auto mb-3 border border-[#C6A96A]/60 text-[#C6A96A] shadow-md">
+          <Lock className="w-8 h-8 text-[#C6A96A]" />
         </div>
 
-        <h3 className="text-xl font-bold text-slate-800">Acceso a Caja</h3>
-        <p className="text-xs text-slate-500 mt-1 mb-4">
+        <h3 className="text-xl font-bold text-[#2F3A2A] font-serif">Acceso a Caja</h3>
+        <p className="text-xs text-slate-600 mt-1 mb-4">
           Espacio restringido a Gerencia (Jesica y Leandro).
         </p>
 
@@ -105,8 +105,8 @@ export default function PinModal({ isOpen, onClose, onSuccess }) {
               key={i} 
               className={`w-4 h-4 rounded-full border-2 transition-all duration-200 ${
                 i < pin.length 
-                  ? 'bg-amber-600 border-amber-600 scale-110 shadow-sm' 
-                  : 'bg-slate-100 border-slate-300'
+                  ? 'bg-[#2F3A2A] border-[#C6A96A] scale-110 shadow-sm' 
+                  : 'bg-white border-slate-300'
               }`}
             />
           ))}
@@ -125,26 +125,26 @@ export default function PinModal({ isOpen, onClose, onSuccess }) {
             <button
               key={num}
               onClick={() => handleDigit(num.toString())}
-              className="h-14 rounded-2xl bg-slate-50 hover:bg-amber-50 active:bg-amber-100 text-xl font-bold text-slate-700 hover:text-amber-900 border border-slate-200 hover:border-amber-300 transition-all shadow-sm active:scale-95 flex items-center justify-center"
+              className="h-14 rounded-2xl bg-white hover:bg-[#2F3A2A] active:bg-[#1E251B] text-xl font-bold text-slate-800 hover:text-[#F6F3E9] border border-[#E3DCCE] hover:border-[#C6A96A] transition-all shadow-sm active:scale-95 flex items-center justify-center cursor-pointer font-serif"
             >
               {num}
             </button>
           ))}
           <button
             onClick={handleClear}
-            className="h-14 rounded-2xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-600 border border-slate-200 transition-all flex items-center justify-center"
+            className="h-14 rounded-2xl bg-slate-200/60 hover:bg-slate-200 text-xs font-bold text-slate-700 border border-[#E3DCCE] transition-all flex items-center justify-center cursor-pointer"
           >
             Borrar
           </button>
           <button
             onClick={() => handleDigit('0')}
-            className="h-14 rounded-2xl bg-slate-50 hover:bg-amber-50 active:bg-amber-100 text-xl font-bold text-slate-700 hover:text-amber-900 border border-slate-200 hover:border-amber-300 transition-all shadow-sm active:scale-95 flex items-center justify-center"
+            className="h-14 rounded-2xl bg-white hover:bg-[#2F3A2A] active:bg-[#1E251B] text-xl font-bold text-slate-800 hover:text-[#F6F3E9] border border-[#E3DCCE] hover:border-[#C6A96A] transition-all shadow-sm active:scale-95 flex items-center justify-center cursor-pointer font-serif"
           >
             0
           </button>
           <button
             onClick={handleBackspace}
-            className="h-14 rounded-2xl bg-slate-100 hover:bg-slate-200 text-sm font-semibold text-slate-600 border border-slate-200 transition-all flex items-center justify-center"
+            className="h-14 rounded-2xl bg-slate-200/60 hover:bg-slate-200 text-sm font-bold text-slate-700 border border-[#E3DCCE] transition-all flex items-center justify-center cursor-pointer"
           >
             ⌫
           </button>

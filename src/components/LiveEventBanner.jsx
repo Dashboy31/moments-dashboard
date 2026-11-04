@@ -31,9 +31,9 @@ export default function LiveEventBanner({
   const ultimoItem = itemsConHora.length > 0 ? itemsConHora[itemsConHora.length - 1] : null;
 
   return (
-    <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-amber-950 text-white rounded-3xl p-4 sm:p-5 shadow-card border border-amber-900/40 mb-6 relative overflow-hidden">
+    <div className="bg-gradient-to-r from-[#1E251B] via-[#2F3A2A] to-[#1E251B] text-[#F6F3E9] rounded-3xl p-4 sm:p-5 shadow-card border border-[#C6A96A]/40 mb-6 relative overflow-hidden">
       {/* Luz ambiental decorativa */}
-      <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+      <div className="absolute top-0 right-0 w-80 h-80 bg-[#C6A96A]/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
       
       <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         
@@ -62,7 +62,7 @@ export default function LiveEventBanner({
             </select>
           </div>
 
-          <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+          <h2 className="text-xl sm:text-2xl font-bold font-serif text-[#F6F3E9] tracking-tight flex items-center gap-2">
             <span>{eventoActivo.titulo}</span>
           </h2>
 
@@ -126,10 +126,10 @@ export default function LiveEventBanner({
 
           <button
             onClick={onIrAlChecklist}
-            className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black rounded-xl transition-all shadow-md active:scale-98"
+            className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-[#C6A96A] hover:bg-[#d8bb7a] text-[#1E251B] text-xs font-bold rounded-xl transition-all shadow-md active:scale-98 cursor-pointer font-['Montserrat']"
           >
             <span>Ver y marcar Checklist en vivo</span>
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-4 h-4 text-[#1E251B]" />
           </button>
         </div>
 

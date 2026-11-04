@@ -6,29 +6,34 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        serif: ['"Playfair Display"', 'Georgia', 'serif'],
+        sans: ['Montserrat', '"Plus Jakarta Sans"', 'system-ui', 'sans-serif']
+      },
       colors: {
         moments: {
-          50: '#fdfbf7',
-          100: '#f7f1e6',
-          200: '#eddcc5',
-          300: '#dfc29e',
-          400: '#cfa272',
-          500: '#c0854d',
-          600: '#a76a3b',
-          700: '#875132',
-          800: '#6e432d',
-          900: '#5c3828',
-          gold: '#c4974f',
-          goldLight: '#f4e8d3',
-          rose: '#e36387',
-          roseLight: '#fceef2',
-          navy: '#1b2a4a',
-          navyLight: '#2c3e66',
-          garden: '#2d6a4f',
-          gardenLight: '#e8f5ee',
-          surface: '#fcfaf7',
-          card: '#ffffff',
-          border: '#e8dfd5'
+          forest: '#2F3A2A',       // Verde Bosque Profundo Oficial
+          forestDark: '#1E251B',   // Verde Oscuro para barras y modales
+          sage: '#5A6B4A',         // Verde Salvia / Oliva Medio
+          sageLight: '#E8EDE3',    // Salvia muy suave
+          gold: '#C6A96A',         // Dorado Cálido Oficial
+          goldLight: '#F7F1E3',    // Dorado tenue / Champán
+          goldDark: '#9F803C',     // Oro intenso
+          cream: '#F6F3E9',        // Arena / Crema Oficial de Fondo
+          surface: '#FDFBF7',      // Superficie limpia
+          card: '#FFFFFF',
+          border: '#E3DCCE',       // Borde suave
+          dark: '#161D13',         // Casi negro botánico
+          50: '#F6F3E9',
+          100: '#E8EDE3',
+          200: '#D5DEC9',
+          300: '#C6A96A',
+          400: '#8A9E75',
+          500: '#5A6B4A',
+          600: '#465538',
+          700: '#2F3A2A',
+          800: '#232C1E',
+          900: '#161D13'
         }
       },
       boxShadow: {

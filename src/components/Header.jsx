@@ -94,27 +94,27 @@ export default function Header({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[#160c18] text-white border-b border-amber-900/30 shadow-xl transition-colors">
+    <header className="sticky top-0 z-40 bg-[#1E251B] text-white border-b border-[#C6A96A]/30 shadow-xl transition-colors">
       
       {/* -------------------------------------------------------------------
-          BARRA SUPERIOR PRINCIPAL (ESTILO MIFA DASHBOARD CON IDENTIDAD MOMENTS)
+          BARRA SUPERIOR PRINCIPAL (ESTILO BRANDBOOK MOMENT'S)
          ------------------------------------------------------------------- */}
       <div className="max-w-[1920px] mx-auto px-3 sm:px-6 py-2.5 flex items-center justify-between gap-3">
         
-        {/* LOGO OFICIAL E IDENTIDAD MOMENTS */}
+        {/* LOGO OFICIAL E IDENTIDAD MOMENT'S */}
         <div 
           className="flex items-center gap-3 cursor-pointer py-0.5 select-none" 
           onClick={() => setActiveTab('semana')}
           title="Ir al inicio (Semana & Acciones)"
         >
-          <div className="bg-white/10 hover:bg-white/15 p-1 rounded-2xl border border-amber-400/30 shadow-sm transition">
+          <div className="bg-[#2F3A2A] hover:bg-[#384532] px-2 py-1.5 rounded-2xl border border-[#C6A96A]/40 shadow-sm transition">
             <MomentsLogo variant="header" />
           </div>
           <div className="hidden xl:block">
-            <span className="text-[10px] font-bold text-amber-300 uppercase tracking-widest block">
-              Salón de Eventos Familiar
+            <span className="text-[10px] font-bold text-[#C6A96A] uppercase tracking-widest block font-['Montserrat']">
+              Salón de Eventos
             </span>
-            <span className="text-[11px] text-slate-300 font-medium">
+            <span className="text-[11px] text-[#E8EDE3] font-medium">
               San Rafael, Mendoza
             </span>
           </div>
@@ -133,19 +133,19 @@ export default function Header({
               <button
                 key={tab.id}
                 onClick={() => handleTabClick(tab)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap font-['Montserrat'] ${
                   isActive
-                    ? 'bg-gradient-to-r from-[#7d1728] via-[#911f33] to-[#7d1728] text-white shadow-md shadow-rose-950/40 border border-amber-400/40 ring-1 ring-amber-300/30'
-                    : 'text-slate-300 hover:text-white hover:bg-white/10 border border-transparent'
+                    ? 'bg-[#2F3A2A] text-white shadow-md shadow-black/30 border border-[#C6A96A] ring-1 ring-[#C6A96A]/40'
+                    : 'text-[#E8EDE3]/80 hover:text-white hover:bg-white/10 border border-transparent'
                 }`}
                 title={tab.label}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-amber-200' : 'text-slate-400'}`} />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#C6A96A]' : 'text-[#A5B29B]'}`} />
                 <span>{tab.number}. {tab.shortLabel}</span>
 
                 {/* Candado en caja si no está desbloqueada */}
                 {estaProtegido && (
-                  <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md font-black bg-amber-400/20 text-amber-200 border border-amber-400/30">
+                  <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md font-black bg-[#C6A96A]/20 text-[#C6A96A] border border-[#C6A96A]/30">
                     <Lock className="w-2.5 h-2.5" />
                     <span>PIN</span>
                   </span>
@@ -165,9 +165,9 @@ export default function Header({
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           
           {/* Selector de Ambiente / Fondo de Salón */}
-          <div className="hidden lg:flex items-center gap-1.5 bg-[#251528] border border-amber-900/40 rounded-xl px-2.5 py-1 text-xs">
-            <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
-            <span className="text-[10px] font-bold text-amber-200/80 uppercase">Fondo:</span>
+          <div className="hidden lg:flex items-center gap-1.5 bg-[#2F3A2A]/80 border border-[#C6A96A]/30 rounded-xl px-2.5 py-1 text-xs">
+            <ImageIcon className="w-3.5 h-3.5 text-[#C6A96A]" />
+            <span className="text-[10px] font-bold text-[#C6A96A] uppercase font-['Montserrat']">Fondo:</span>
             <select
               value={fondoActual}
               onChange={(e) => setFondoActual(e.target.value)}
@@ -198,46 +198,46 @@ export default function Header({
           <div className="relative">
             <button
               onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-              className="flex items-center gap-2 bg-[#251528] hover:bg-[#341d38] px-2.5 py-1.5 rounded-2xl border border-amber-400/30 text-xs font-medium transition cursor-pointer shadow-sm"
+              className="flex items-center gap-2 bg-[#2F3A2A] hover:bg-[#384532] px-2.5 py-1.5 rounded-2xl border border-[#C6A96A]/40 text-xs font-medium transition cursor-pointer shadow-sm"
             >
               {/* Avatar circular con inicial y color oficial */}
               <div
                 className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-black shadow-sm"
-                style={{ backgroundColor: usuarioActivo?.avatar_color || '#7c3aed' }}
+                style={{ backgroundColor: usuarioActivo?.avatar_color || '#2F3A2A' }}
               >
                 {usuarioActivo?.nombre ? usuarioActivo.nombre.charAt(0) : 'U'}
               </div>
 
               {/* Nombre y Cargo */}
               <div className="text-left hidden sm:block">
-                <div className="text-white font-bold text-xs leading-none">
+                <div className="text-white font-bold text-xs leading-none font-['Playfair_Display']">
                   {usuarioActivo?.nombre || 'Usuario'}
                 </div>
-                <div className="text-[10px] text-amber-200/80 leading-none mt-1 truncate max-w-[130px]">
+                <div className="text-[10px] text-[#C6A96A] leading-none mt-1 truncate max-w-[130px] font-['Montserrat']">
                   {usuarioActivo?.rol || 'Equipo'}
                 </div>
               </div>
 
-              <ChevronDown className="w-3.5 h-3.5 text-amber-300/80 ml-0.5" />
+              <ChevronDown className="w-3.5 h-3.5 text-[#C6A96A] ml-0.5" />
             </button>
 
             {/* Menu Desplegable de Usuario */}
             {userDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-72 bg-[#1b0f1d] border border-amber-500/30 rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150 text-white">
+              <div className="absolute right-0 mt-2 w-72 bg-[#1E251B] border border-[#C6A96A]/40 rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150 text-white">
                 
                 <div className="px-3.5 py-2 border-b border-white/10">
-                  <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider block">
+                  <span className="text-[10px] font-black text-[#C6A96A] uppercase tracking-wider block font-['Montserrat']">
                     Sesión Activa
                   </span>
-                  <div className="font-bold text-sm text-white mt-0.5">
+                  <div className="font-bold text-sm text-white mt-0.5 font-['Playfair_Display']">
                     {usuarioActivo?.nombre}
                   </div>
-                  <div className="text-xs text-slate-300">
+                  <div className="text-xs text-[#E8EDE3]/80">
                     {usuarioActivo?.rol}
                   </div>
                 </div>
 
-                <div className="px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                <div className="px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-wider font-['Montserrat']">
                   Cambiar Operador Activo:
                 </div>
 
@@ -251,8 +251,8 @@ export default function Header({
                       }}
                       className={`w-full flex items-center justify-between px-3.5 py-2 text-left text-xs transition cursor-pointer ${
                         usuarioActivo?.id === u.id
-                          ? 'bg-[#7d1728]/40 text-amber-200 font-bold border-l-2 border-amber-400'
-                          : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                          ? 'bg-[#2F3A2A] text-[#C6A96A] font-bold border-l-2 border-[#C6A96A]'
+                          : 'text-[#E3DCCE]/80 hover:bg-[#2F3A2A]/40 hover:text-[#F6F3E9]'
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -268,7 +268,7 @@ export default function Header({
                         </div>
                       </div>
                       {usuarioActivo?.id === u.id && (
-                        <span className="text-[10px] font-bold text-amber-400">Activo</span>
+                        <span className="text-[10px] font-bold text-[#C6A96A]">Activo</span>
                       )}
                     </button>
                   ))}
@@ -299,7 +299,7 @@ export default function Header({
       {/* -------------------------------------------------------------------
           PESTAÑAS MÓVILES (SCROLL HORIZONTAL EN DISPOSITIVOS CHICOS)
          ------------------------------------------------------------------- */}
-      <div className="md:hidden bg-[#1f1122] border-t border-amber-900/30 px-3 py-1.5 overflow-x-auto no-scrollbar">
+      <div className="md:hidden bg-[#1E251B] border-t border-[#C6A96A]/30 px-3 py-1.5 overflow-x-auto no-scrollbar">
         <div className="flex items-center gap-1.5">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -312,14 +312,14 @@ export default function Header({
                 onClick={() => handleTabClick(tab)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
                   isActive
-                    ? 'bg-gradient-to-r from-[#7d1728] to-[#911f33] text-white shadow-sm border border-amber-400/40'
-                    : 'text-slate-300 hover:bg-white/10'
+                    ? 'bg-[#2F3A2A] text-white shadow-sm border border-[#C6A96A]'
+                    : 'text-[#E8EDE3]/80 hover:bg-white/10'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-amber-200' : 'text-slate-400'}`} />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#C6A96A]' : 'text-slate-400'}`} />
                 <span>{tab.number}. {tab.shortLabel}</span>
                 {estaProtegido && (
-                  <Lock className="w-2.5 h-2.5 text-amber-300" />
+                  <Lock className="w-2.5 h-2.5 text-[#C6A96A]" />
                 )}
               </button>
             );

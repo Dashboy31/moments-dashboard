@@ -1,110 +1,147 @@
 import React from 'react';
 
-export default function MomentsLogo({ variant = 'header', className = '' }) {
+export default function MomentsLogo({ variant = 'header', className = '', showSubtitle = true }) {
+  // Variante 1: Monograma circular con la 'M' caligráfica del brandbook
+  if (variant === 'monogram') {
+    return (
+      <div className={`relative inline-flex items-center justify-center shrink-0 ${className}`}>
+        <div className="w-10 h-10 rounded-full bg-[#2F3A2A] border-2 border-[#C6A96A] flex items-center justify-center shadow-md">
+          <span 
+            className="text-[#C6A96A] text-xl select-none leading-none pt-0.5"
+            style={{ fontFamily: "'Great Vibes', cursive", fontWeight: 700 }}
+          >
+            M
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // Variante 2: Compacta (para tarjetas, tablas, badges)
   if (variant === 'compact') {
     return (
       <div className={`flex items-center gap-2.5 ${className}`}>
-        {/* Monograma Ch G */}
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-200 via-amber-400 to-amber-700 p-[1.5px] shadow-md shrink-0">
-          <div className="w-full h-full rounded-full bg-[#6a1523] flex items-center justify-center text-amber-200 font-serif font-black text-xs tracking-tighter">
-            <span style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}>Ch G</span>
-          </div>
-        </div>
-
-        {/* Tipografía Cursiva */}
-        <div className="flex flex-col">
+        {/* Monograma circular */}
+        <div className="w-8 h-8 rounded-full bg-[#2F3A2A] border border-[#C6A96A] flex items-center justify-center shadow-xs shrink-0">
           <span 
-            className="text-2xl font-bold tracking-wide text-[#7d1728] drop-shadow-sm leading-none"
-            style={{ fontFamily: "'Great Vibes', cursive" }}
+            className="text-[#C6A96A] text-base leading-none select-none pt-0.5"
+            style={{ fontFamily: "'Great Vibes', cursive", fontWeight: 700 }}
           >
-            Moment's
-          </span>
-          <span 
-            className="text-[8px] font-black uppercase tracking-[0.25em] text-[#b3863d] leading-none mt-0.5"
-            style={{ fontFamily: "'Cinzel', serif" }}
-          >
-            Empresa Gastronómica
+            M
           </span>
         </div>
-      </div>
-    );
-  }
 
-  if (variant === 'white') {
-    return (
-      <div className={`flex items-center gap-3 ${className}`}>
-        {/* Monograma Ch G */}
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-200 via-amber-400 to-amber-600 p-[2px] shadow-lg shrink-0">
-          <div className="w-full h-full rounded-full bg-[#59101d] flex items-center justify-center text-amber-200 font-serif font-black text-xs tracking-tighter border border-amber-300/40">
-            <span style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}>Ch G</span>
-          </div>
-        </div>
-
-        <div className="flex flex-col">
-          <span 
-            className="text-3xl font-bold tracking-wide text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)] leading-none"
-            style={{ fontFamily: "'Great Vibes', cursive" }}
-          >
-            Moment's
-          </span>
-          <span 
-            className="text-[9px] font-bold uppercase tracking-[0.28em] text-amber-300 leading-none mt-1 drop-shadow-sm"
-            style={{ fontFamily: "'Cinzel', serif" }}
-          >
-            Empresa Gastronómica
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  // Variant default 'header'
-  return (
-    <div className={`flex items-center gap-3 ${className}`}>
-      {/* Medallón Monograma Ch G */}
-      <div className="relative group shrink-0">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#d4af37] via-[#f3e5ab] to-[#aa771c] p-[2px] shadow-md shadow-amber-950/20">
-          <div className="w-full h-full rounded-full bg-gradient-to-b from-[#6b1424] to-[#4e0c19] flex items-center justify-center border border-amber-200/30">
+        <div className="flex flex-col leading-none">
+          <div className="flex items-baseline font-serif">
             <span 
-              className="text-amber-200 font-bold text-xs tracking-tighter"
-              style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}
+              className="text-xl text-[#2F3A2A] select-none"
+              style={{ fontFamily: "'Great Vibes', cursive", fontWeight: 700 }}
             >
-              Ch G
+              M
+            </span>
+            <span 
+              className="text-sm font-bold tracking-tight text-[#2F3A2A] -ml-0.5 font-['Playfair_Display']"
+            >
+              OMENT'S
             </span>
           </div>
+          {showSubtitle && (
+            <span className="text-[7.5px] font-bold uppercase tracking-[0.22em] text-[#5A6B4A] mt-0.5 font-['Montserrat']">
+              Salón de Eventos
+            </span>
+          )}
         </div>
-        {/* Pequeña corona o destello */}
-        <span className="absolute -top-1 -right-1 text-[10px]">✨</span>
+      </div>
+    );
+  }
+
+  // Variante 3: Sobre fondo oscuro (Header / Modales oscuros)
+  if (variant === 'header' || variant === 'dark') {
+    return (
+      <div className={`flex items-center gap-3 ${className}`}>
+        {/* Medallón Monograma Verde Bosque y Oro */}
+        <div className="relative shrink-0">
+          <div className="w-10 h-10 rounded-full bg-[#2F3A2A] border-2 border-[#C6A96A] flex items-center justify-center shadow-md shadow-black/30">
+            <span 
+              className="text-[#C6A96A] text-2xl select-none leading-none pt-0.5"
+              style={{ fontFamily: "'Great Vibes', cursive", fontWeight: 700 }}
+            >
+              M
+            </span>
+          </div>
+          <span className="absolute -top-1 -right-1 text-[9px]">✨</span>
+        </div>
+
+        {/* Tipografía Oficial Moment's + Salón de Eventos */}
+        <div className="flex flex-col justify-center leading-none">
+          <div className="flex items-baseline">
+            <span 
+              className="text-3xl text-[#C6A96A] select-none leading-none drop-shadow-sm"
+              style={{ fontFamily: "'Great Vibes', cursive", fontWeight: 700 }}
+            >
+              M
+            </span>
+            <span 
+              className="text-base font-extrabold tracking-[0.04em] text-[#F6F3E9] -ml-0.5 font-['Playfair_Display']"
+            >
+              OMENT'S
+            </span>
+          </div>
+          {showSubtitle && (
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="h-[1px] w-3 bg-[#C6A96A]/60" />
+              <span className="text-[8px] font-bold uppercase tracking-[0.28em] text-[#C6A96A] font-['Montserrat']">
+                Salón de Eventos
+              </span>
+              <span className="h-[1px] w-3 bg-[#C6A96A]/60" />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Variante 4: Default sobre fondo claro (Login, portada, exportación)
+  return (
+    <div className={`flex flex-col items-center justify-center text-center ${className}`}>
+      {/* Monograma destacado con ramita de olivo */}
+      <div className="relative mb-2">
+        <div className="w-14 h-14 rounded-full bg-[#2F3A2A] border-2 border-[#C6A96A] flex items-center justify-center shadow-lg shadow-[#2F3A2A]/20">
+          <span 
+            className="text-[#C6A96A] text-3xl select-none leading-none pt-1"
+            style={{ fontFamily: "'Great Vibes', cursive", fontWeight: 700 }}
+          >
+            M
+          </span>
+        </div>
+        <span className="absolute -bottom-1 -right-1 text-sm">🌿</span>
       </div>
 
-      {/* Tipografía Cursiva Oficial */}
-      <div className="flex flex-col justify-center">
-        <div className="flex items-baseline gap-1.5">
-          <span 
-            className="text-3xl font-bold text-[#7d1728] leading-none select-none tracking-tight"
-            style={{ 
-              fontFamily: "'Great Vibes', cursive",
-              textShadow: '0 1px 1px rgba(125,23,40,0.15)'
-            }}
-          >
-            Moment's
-          </span>
-          <span className="hidden sm:inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/80 shadow-xs">
+      {/* Nombre oficial del Brandbook */}
+      <div className="flex items-baseline justify-center">
+        <span 
+          className="text-4xl text-[#2F3A2A] select-none leading-none"
+          style={{ fontFamily: "'Great Vibes', cursive", fontWeight: 700 }}
+        >
+          M
+        </span>
+        <span 
+          className="text-2xl font-black tracking-tight text-[#2F3A2A] -ml-1 font-['Playfair_Display']"
+        >
+          OMENT'S
+        </span>
+      </div>
+
+      {/* Subtítulo oficial con líneas doradas */}
+      {showSubtitle && (
+        <div className="flex items-center justify-center gap-2 mt-1.5">
+          <span className="h-[1px] w-6 bg-[#C6A96A]" />
+          <span className="text-[9px] font-black uppercase tracking-[0.32em] text-[#5A6B4A] font-['Montserrat']">
             Salón de Eventos
           </span>
+          <span className="h-[1px] w-6 bg-[#C6A96A]" />
         </div>
-        <div className="flex items-center gap-2 mt-0.5">
-          <span 
-            className="text-[9px] font-black uppercase tracking-[0.24em] text-[#9a6e29] leading-none"
-            style={{ fontFamily: "'Cinzel', serif" }}
-          >
-            Empresa Gastronómica
-          </span>
-          <span className="text-[9px] text-slate-400 leading-none hidden md:inline">
-            · San Rafael, Mendoza
-          </span>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

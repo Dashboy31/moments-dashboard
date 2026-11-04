@@ -84,18 +84,18 @@ export default function ChecklistView({
     <div className="space-y-6 max-w-4xl mx-auto">
       
       {/* Encabezado con selector de Evento Activo */}
-      <div className="bg-white rounded-3xl p-5 shadow-soft border border-moments-border">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+      <div className="bg-white rounded-3xl p-5 shadow-soft border border-[#E3DCCE]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E3DCCE]">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-2xl font-bold text-[#2F3A2A] font-serif tracking-tight">
                 Checklist Operativo en Vivo
               </h1>
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-300">
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#2F3A2A]/10 text-[#2F3A2A] border border-[#5A6B4A]/30 font-['Montserrat']">
                 Logística de Evento
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5 font-['Montserrat']">
               Ideal para uso desde el celular durante el evento (Paulina) y monitoreo en vivo (Leandro).
             </p>
           </div>
@@ -103,13 +103,13 @@ export default function ChecklistView({
           {/* Toggle Modo Leandro / Modo Operativo */}
           <button
             onClick={() => setModoLeandro(!modoLeandro)}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-2xl text-xs font-bold transition-all border ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-2xl text-xs font-bold transition-all border font-['Montserrat'] cursor-pointer ${
               modoLeandro 
-                ? 'bg-indigo-50 border-indigo-300 text-indigo-900' 
+                ? 'bg-[#2F3A2A]/10 border-[#5A6B4A]/40 text-[#2F3A2A]' 
                 : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
             }`}
           >
-            <Eye className="w-4 h-4 text-indigo-600" />
+            <Eye className="w-4 h-4 text-[#5A6B4A]" />
             <span>{modoLeandro ? 'Modo Visor (Leandro: Solo Ver)' : 'Modo Paulina (Tocar para Marcar)'}</span>
           </button>
         </div>
@@ -117,7 +117,7 @@ export default function ChecklistView({
         {/* Ficha del Evento que se está chequeando */}
         <div className="pt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 font-['Montserrat']">
               Evento Seleccionado:
             </div>
             <div className="flex items-center gap-3">
@@ -127,7 +127,7 @@ export default function ChecklistView({
                   const ev = todosEventos.find(item => item.id === e.target.value);
                   if (ev) onCambiarEventoActivo(ev);
                 }}
-                className="bg-amber-50 text-slate-900 border border-amber-300 rounded-xl px-3 py-1.5 font-black text-sm sm:text-base focus:outline-none cursor-pointer"
+                className="bg-[#F6F3E9] text-[#2F3A2A] border border-[#C6A96A]/60 rounded-xl px-3 py-1.5 font-bold text-sm sm:text-base focus:outline-none cursor-pointer font-['Montserrat']"
               >
                 {todosEventos.filter(e => e.tipo !== 'mantenimiento').map(e => (
                   <option key={e.id} value={e.id}>
@@ -139,18 +139,18 @@ export default function ChecklistView({
           </div>
 
           {/* Progreso Total */}
-          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 min-w-[200px]">
-            <div className="flex justify-between items-center text-xs font-bold mb-1">
-              <span className="text-slate-600">Avance General:</span>
-              <span className="text-amber-800 font-black text-sm">{porcentaje}%</span>
+          <div className="bg-[#F6F3E9] p-3 rounded-2xl border border-[#E3DCCE] min-w-[200px]">
+            <div className="flex justify-between items-center text-xs font-bold mb-1 font-['Montserrat']">
+              <span className="text-[#2F3A2A]">Avance General:</span>
+              <span className="text-[#5A6B4A] font-black text-sm">{porcentaje}%</span>
             </div>
             <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
               <div 
-                className="h-full bg-gradient-to-r from-amber-500 to-emerald-600 rounded-full transition-all duration-300"
+                className="h-full bg-gradient-to-r from-[#5A6B4A] to-[#C6A96A] rounded-full transition-all duration-300"
                 style={{ width: `${porcentaje}%` }}
               />
             </div>
-            <div className="text-[10px] text-slate-500 font-medium text-right mt-1">
+            <div className="text-[10px] text-slate-500 font-medium text-right mt-1 font-['Montserrat']">
               {completados} de {total} ítems completados
             </div>
           </div>
@@ -159,36 +159,36 @@ export default function ChecklistView({
       </div>
 
       {/* Filtro rápido por Etapa y Botón Nueva Tarea */}
-      <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
+      <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 font-['Montserrat']">
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setEtapaFiltro('todas')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              etapaFiltro === 'todas' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              etapaFiltro === 'todas' ? 'bg-[#2F3A2A] text-[#F6F3E9]' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
             }`}
           >
             Todas las Etapas
           </button>
           <button
             onClick={() => setEtapaFiltro('antes')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              etapaFiltro === 'antes' ? 'bg-amber-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              etapaFiltro === 'antes' ? 'bg-[#5A6B4A] text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
             }`}
           >
             1. Antes
           </button>
           <button
             onClick={() => setEtapaFiltro('durante')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              etapaFiltro === 'durante' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              etapaFiltro === 'durante' ? 'bg-[#5A6B4A] text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
             }`}
           >
             2. Durante (En Vivo)
           </button>
           <button
             onClick={() => setEtapaFiltro('despues')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              etapaFiltro === 'despues' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              etapaFiltro === 'despues' ? 'bg-[#5A6B4A] text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
             }`}
           >
             3. Cierre
@@ -198,9 +198,9 @@ export default function ChecklistView({
         {!modoLeandro && (
           <button
             onClick={() => setModalNuevaTarea(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all whitespace-nowrap active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] border border-[#C6A96A]/60 hover:border-[#C6A96A] rounded-xl text-xs font-bold shadow-sm transition-all whitespace-nowrap active:scale-95 cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-3.5 h-3.5 text-[#C6A96A]" />
             <span className="hidden sm:inline">+ Agregar Tarea Imprevista</span>
             <span className="sm:hidden">+ Tarea</span>
           </button>

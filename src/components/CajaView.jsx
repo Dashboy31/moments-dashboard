@@ -442,23 +442,23 @@ export default function CajaView({
           1. ENCABEZADO Y SELECTOR DE PESTAÑAS POR CAJA (ESTRUCTURA DE LA DUEÑA)
           Naranja -> Banco Nación -> Mercado Pago -> Efectivo -> General Consolidado
          ------------------------------------------------------------------- */}
-      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 shadow-soft border border-moments-border">
+      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 shadow-soft border border-[#E3DCCE]">
         
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#E3DCCE]">
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
-              <span className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-800 flex items-center justify-center font-black">
-                <Wallet className="w-4 h-4 text-amber-700" />
+              <span className="w-8 h-8 rounded-xl bg-[#2F3A2A] text-[#C6A96A] border border-[#C6A96A]/40 flex items-center justify-center font-bold">
+                <Wallet className="w-4 h-4 text-[#C6A96A]" />
               </span>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-2xl font-bold text-[#2F3A2A] font-serif tracking-tight">
                 Caja y Gestión Financiera
               </h1>
-              <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#2F3A2A]/10 text-[#2F3A2A] border border-[#5A6B4A]/30 font-['Montserrat']">
                 Acceso Gerencia (Jesica & Leandro)
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1 font-medium">
-              Administración por cajas separadas solicitada por la dueña: cada movimiento ingresa en su propia cuenta y se unifica en el general.
+            <p className="text-xs text-slate-500 mt-1 font-['Montserrat']">
+              Administración por cajas separadas: cada movimiento ingresa en su propia cuenta y se unifica en el general consolidado.
             </p>
           </div>
 
@@ -542,23 +542,23 @@ export default function CajaView({
               onClick={() => setSubTabActiva('general')}
               className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex flex-col justify-between ${
                 subTabActiva === 'general'
-                  ? 'bg-slate-900 text-white shadow-md shadow-slate-900/30 border-slate-900 ring-2 ring-offset-1 ring-slate-400/30 scale-[1.01]'
+                  ? 'bg-[#2F3A2A] text-[#F6F3E9] shadow-md shadow-[#2F3A2A]/30 border-[#C6A96A]/60 ring-2 ring-offset-1 ring-[#C6A96A]/40 scale-[1.01]'
                   : 'bg-slate-50/80 hover:bg-slate-100 text-slate-700 border-slate-200/80'
               }`}
             >
               <div className="flex items-center justify-between gap-1 mb-1.5">
                 <div className="flex items-center gap-2">
-                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${subTabActiva === 'general' ? 'bg-white/20 text-white' : 'bg-white text-slate-700 shadow-xs'}`}>
+                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${subTabActiva === 'general' ? 'bg-[#C6A96A]/20 text-[#C6A96A]' : 'bg-white text-slate-700 shadow-xs'}`}>
                     <Layers className="w-3.5 h-3.5" />
                   </div>
-                  <span className="font-black text-xs tracking-tight">General</span>
+                  <span className="font-bold text-xs tracking-tight">General</span>
                 </div>
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400">Total</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[#C6A96A]/20 text-[#C6A96A]">Total</span>
               </div>
 
               <div className="mt-1">
                 <div className="text-[10px] opacity-80 font-medium">Total en Salón:</div>
-                <div className={`text-xs font-black tracking-tight ${subTabActiva === 'general' ? 'text-amber-300' : 'text-slate-900'}`}>
+                <div className={`text-xs font-bold tracking-tight ${subTabActiva === 'general' ? 'text-[#C6A96A]' : 'text-slate-900'}`}>
                   {formatARS(metricasPorCaja.general.saldo)}
                 </div>
               </div>
