@@ -10,6 +10,49 @@ export const USUARIOS = [
   { id: 'paulina', nombre: 'Paulina', rol: 'Logística de Eventos', badge: 'Logística', color: 'bg-fuchsia-100 text-fuchsia-900 border-fuchsia-300', avatar_color: '#a21caf', password: '123' }
 ];
 
+export const CAJAS_LISTA = [
+  {
+    id: 'naranja',
+    nombre: 'Naranja',
+    nombreCorto: 'Naranja',
+    subtitulo: 'Tarjeta Naranja / Naranja X',
+    colorPrincipal: '#ea580c',
+    colorTailwind: 'orange',
+    badge: 'bg-orange-100 text-orange-950 border-orange-300',
+    dot: 'bg-orange-500'
+  },
+  {
+    id: 'banco_nacion',
+    nombre: 'Banco Nación',
+    nombreCorto: 'BNA',
+    subtitulo: 'Cuenta Corriente / Transferencias BNA',
+    colorPrincipal: '#1d4ed8',
+    colorTailwind: 'blue',
+    badge: 'bg-blue-100 text-blue-950 border-blue-300',
+    dot: 'bg-blue-600'
+  },
+  {
+    id: 'mercado_pago',
+    nombre: 'Mercado Pago',
+    nombreCorto: 'MP',
+    subtitulo: 'Cobros QR / CVU / Dinero en cuenta',
+    colorPrincipal: '#0284c7',
+    colorTailwind: 'sky',
+    badge: 'bg-sky-100 text-sky-950 border-sky-300',
+    dot: 'bg-sky-500'
+  },
+  {
+    id: 'efectivo',
+    nombre: 'Efectivo',
+    nombreCorto: 'Efectivo',
+    subtitulo: 'Caja física / Dinero en mano en el Salón',
+    colorPrincipal: '#059669',
+    colorTailwind: 'emerald',
+    badge: 'bg-emerald-100 text-emerald-950 border-emerald-300',
+    dot: 'bg-emerald-500'
+  }
+];
+
 export const CATEGORIAS_CAJA = {
   Variables: [
     'Proveedores de evento',
@@ -45,10 +88,11 @@ export const MOVIMIENTOS_SEED = [
     fecha: '2026-10-15',
     concepto: 'Cobro cuota 3 - 15 de Martina Giménez',
     tipo: 'ingreso',
+    caja: 'banco_nacion',
     categoria: 'Variables',
     subcategoria: 'Proveedores de evento',
     monto: 1450000,
-    metodoPago: 'Transferencia',
+    metodoPago: 'Transferencia BNA',
     cargo: 'Gabriela',
     notas: 'Saldo acordado con la mamá'
   },
@@ -57,6 +101,7 @@ export const MOVIMIENTOS_SEED = [
     fecha: '2026-10-14',
     concepto: 'Seña reserva Boda Valentina & Tomás (Marzo 2027)',
     tipo: 'ingreso',
+    caja: 'efectivo',
     categoria: 'Variables',
     subcategoria: 'Proveedores de evento',
     monto: 2200000,
@@ -69,6 +114,7 @@ export const MOVIMIENTOS_SEED = [
     fecha: '2026-10-13',
     concepto: 'Pago mozos y personal de servicio evento del sábado',
     tipo: 'egreso',
+    caja: 'efectivo',
     categoria: 'Variables',
     subcategoria: 'Personal eventual (Mozos/Barra/Seguridad)',
     monto: 480000,
@@ -81,22 +127,24 @@ export const MOVIMIENTOS_SEED = [
     fecha: '2026-10-12',
     concepto: 'DJ e iluminación robotizada - Anticipo evento',
     tipo: 'egreso',
+    caja: 'mercado_pago',
     categoria: 'Variables',
     subcategoria: 'Música / DJ / Sonido',
     monto: 320000,
-    metodoPago: 'Transferencia',
+    metodoPago: 'Mercado Pago',
     cargo: 'Pablo',
-    notas: 'Servicio DJ Cuyo Pro'
+    notas: 'Servicio DJ Cuyo Pro transferido por MP'
   },
   {
     id: 'mov-5',
     fecha: '2026-10-10',
     concepto: 'Retiro mensual Leandro',
     tipo: 'egreso',
+    caja: 'banco_nacion',
     categoria: 'Retiros personales',
     subcategoria: 'Retiro Leandro',
     monto: 850000,
-    metodoPago: 'Transferencia',
+    metodoPago: 'Transferencia BNA',
     cargo: 'Jesica',
     notas: 'Retiro de utilidades período Octubre'
   },
@@ -105,10 +153,11 @@ export const MOVIMIENTOS_SEED = [
     fecha: '2026-10-10',
     concepto: 'Retiro mensual Jesica',
     tipo: 'egreso',
+    caja: 'banco_nacion',
     categoria: 'Retiros personales',
     subcategoria: 'Retiro Jesica',
     monto: 850000,
-    metodoPago: 'Transferencia',
+    metodoPago: 'Transferencia BNA',
     cargo: 'Jesica',
     notas: 'Retiro de utilidades período Octubre'
   },
@@ -117,6 +166,7 @@ export const MOVIMIENTOS_SEED = [
     fecha: '2026-10-09',
     concepto: 'Retiro Iris',
     tipo: 'egreso',
+    caja: 'efectivo',
     categoria: 'Retiros personales',
     subcategoria: 'Retiro Iris',
     monto: 450000,
@@ -129,6 +179,7 @@ export const MOVIMIENTOS_SEED = [
     fecha: '2026-10-08',
     concepto: 'Día de jardinero - Mantenimiento parque y rosales',
     tipo: 'egreso',
+    caja: 'efectivo',
     categoria: 'Fijos',
     subcategoria: 'Jardinero mensual',
     monto: 160000,
@@ -141,22 +192,24 @@ export const MOVIMIENTOS_SEED = [
     fecha: '2026-10-05',
     concepto: 'Servicio eléctrico Edemsa + Tasas Municipales San Rafael',
     tipo: 'egreso',
+    caja: 'banco_nacion',
     categoria: 'Fijos',
     subcategoria: 'Impuestos y Servicios (Luz/Gas/Tasas)',
     monto: 310000,
-    metodoPago: 'Transferencia',
+    metodoPago: 'Transferencia BNA',
     cargo: 'Gabriela',
-    notas: 'Factura mensual luz y alumbrado'
+    notas: 'Factura mensual luz y alumbrado débito automático'
   },
   {
     id: 'mov-10',
     fecha: '2026-10-03',
     concepto: 'Honorarios contables mensuales',
     tipo: 'egreso',
+    caja: 'banco_nacion',
     categoria: 'Fijos',
     subcategoria: 'Contador',
     monto: 190000,
-    metodoPago: 'Transferencia',
+    metodoPago: 'Transferencia BNA',
     cargo: 'Gabriela',
     notas: 'Estudio Contable Pérez & Asoc.'
   },
@@ -165,10 +218,11 @@ export const MOVIMIENTOS_SEED = [
     fecha: '2026-10-02',
     concepto: 'Cobro total Casamiento Romina & Federico',
     tipo: 'ingreso',
+    caja: 'banco_nacion',
     categoria: 'Variables',
     subcategoria: 'Proveedores de evento',
     monto: 3100000,
-    metodoPago: 'Transferencia',
+    metodoPago: 'Transferencia BNA',
     cargo: 'Pablo',
     notas: 'Cancelación total 10 días antes del evento'
   },
@@ -177,12 +231,39 @@ export const MOVIMIENTOS_SEED = [
     fecha: '2026-10-01',
     concepto: 'Campaña en redes sociales (Instagram / Facebook Ads)',
     tipo: 'egreso',
+    caja: 'naranja',
     categoria: 'Variables',
     subcategoria: 'Marketing y Publicidad',
     monto: 140000,
-    metodoPago: 'Tarjeta',
+    metodoPago: 'Tarjeta Naranja',
     cargo: 'Joaquina',
     notas: 'Pauta promocional temporada egresados y bodas'
+  },
+  {
+    id: 'mov-13',
+    fecha: '2026-10-16',
+    concepto: 'Cobro tarjeta Naranja - Cuota Boda Romina & Federico',
+    tipo: 'ingreso',
+    caja: 'naranja',
+    categoria: 'Variables',
+    subcategoria: 'Proveedores de evento',
+    monto: 1200000,
+    metodoPago: 'Tarjeta Naranja',
+    cargo: 'Joaquina',
+    notas: 'Plan Z / Tarjeta Naranja cobrado por posnet'
+  },
+  {
+    id: 'mov-14',
+    fecha: '2026-10-15',
+    concepto: 'Cobro QR Mercado Pago - Seña Egresados Colegio Maristas',
+    tipo: 'ingreso',
+    caja: 'mercado_pago',
+    categoria: 'Variables',
+    subcategoria: 'Proveedores de evento',
+    monto: 1650000,
+    metodoPago: 'Mercado Pago',
+    cargo: 'Pablo',
+    notas: 'Cobro QR escaneado en oficina'
   }
 ];
 

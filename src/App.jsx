@@ -295,6 +295,11 @@ export default function App() {
     guardarRegistro('movimientos', 'PUT', nuevo);
   };
 
+  const handleEditarMovimiento = (actualizado) => {
+    setMovimientos(prev => prev.map(m => m.id === actualizado.id ? actualizado : m));
+    guardarRegistro('movimientos', 'PUT', actualizado);
+  };
+
   const handleEliminarMovimiento = (id) => {
     setMovimientos(prev => prev.filter(m => m.id !== id));
     guardarRegistro('movimientos', 'DELETE', null, id);
@@ -449,6 +454,7 @@ export default function App() {
               <CajaView
                 movimientos={movimientos}
                 onAgregarMovimiento={handleAgregarMovimiento}
+                onEditarMovimiento={handleEditarMovimiento}
                 onEliminarMovimiento={handleEliminarMovimiento}
                 usuarioActivo={usuarioActivo}
               />

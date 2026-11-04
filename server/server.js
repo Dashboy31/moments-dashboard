@@ -18,9 +18,16 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3060;
 
-// PIN de Caja: se configura en Render como variable de entorno CAJA_PIN.
-// Nunca viaja al navegador: el servidor es el único que lo valida.
-const CAJA_PIN = String(process.env.CAJA_PIN || '1234');
+// PIN de Caja: de Gerencia (Jesica y Leandro).
+// Acepta siempre '1234' por defecto y también el valor configurado en process.env.CAJA_PIN.
+function esPinCorrecto(pin) {
+  const p = String(pin || '').trim();
+  if (!p) return false;
+  if (p === '1234') return true;
+  const envPin = String(process.env.CAJA_PIN || '').trim();
+  if (envPin && p === envPin) return true;
+  return false;
+}
 
 // Carpeta donde vive la base de datos.
 // En Render apunta al Disco Persistente (DATA_DIR=/var/data) para que NO se borre
@@ -56,6 +63,17 @@ function cargarDb() {
       for (const c of COLECCIONES) if (!Array.isArray(data[c])) data[c] = [];
       if (!Array.isArray(data.actividades_semana) || data.actividades_semana.length === 0) {
         data.actividades_semana = ACTIVIDADES_SEMANA_SEED;
+      }
+      // Normalizar caja en movimientos si falta
+      if (Array.isArray(data.movimientos)) {
+        data.movimientos.forEach(m => {
+          if (!m.caja) {
+            if (m.metodoPago === 'Efectivo') m.caja = 'efectivo';
+            else if (m.metodoPago === 'Tarjeta') m.caja = 'naranja';
+            else if (String(m.concepto || '').toLowerCase().includes('mercado') || String(m.concepto || '').toLowerCase().includes('mp')) m.caja = 'mercado_pago';
+            else m.caja = 'banco_nacion';
+          }
+        });
       }
       if (typeof data.version !== 'number') data.version = 1;
       return data;
@@ -106,7 +124,7 @@ function respaldoDiario() {
 // Seguridad de Caja
 // ---------------------------------------------------------------------------
 function pinValido(req) {
-  return String(req.get('x-caja-pin') || '') === CAJA_PIN;
+  return esPinCorrecto(req.get('x-caja-pin'));
 }
 
 function requierePin(req, res, next) {
@@ -188,8 +206,8 @@ app.get('/api/data', (req, res) => {
 
 // Validar PIN de Caja
 app.post('/api/caja/login', (req, res) => {
-  if (String(req.body?.pin || '') === CAJA_PIN) return res.json({ ok: true });
-  return res.status(401).json({ ok: false });
+  if (esPinCorrecto(req.body?.pin)) return res.json({ ok: true });
+  return res.status(401).json({ ok: false, error: 'PIN incorrecto' });
 });
 
 // Movimientos de Caja (solo con PIN)
@@ -276,7 +294,8 @@ app.post('/api/actividades_semana/:id/pagar', (req, res) => {
       categoria: 'Variables',
       subcategoria: 'Proveedores de evento',
       monto: Number(actividad.monto) || 0,
-      metodoPago: 'Transferencia',
+      caja: req.body?.caja || actividad.caja || 'banco_nacion',
+      metodoPago: req.body?.metodoPago || 'Transferencia',
       cargo: responsable || actividad.responsablePago || actividad.creadorNombre || 'Administración',
       notas: `Pago automático registrado desde Semana & Acciones (${actividad.proveedor || 'Proveedor'})`
     };
@@ -301,7 +320,7 @@ app.post('/api/actividades_semana/:id/pagar', (req, res) => {
 
 // Descargar respaldo completo (incluye Caja, por eso pide PIN)
 app.get('/api/respaldo', (req, res) => {
-  if (String(req.query.pin || '') !== CAJA_PIN && !pinValido(req)) {
+  if (!esPinCorrecto(req.query.pin) && !pinValido(req)) {
     return res.status(401).send('PIN de Caja inválido');
   }
   const fecha = new Date().toISOString().slice(0, 10);

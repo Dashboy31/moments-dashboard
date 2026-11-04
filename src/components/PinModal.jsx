@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Lock, KeyRound, X, AlertCircle } from 'lucide-react';
 
 export default function PinModal({ isOpen, onClose, onSuccess }) {
@@ -6,9 +6,7 @@ export default function PinModal({ isOpen, onClose, onSuccess }) {
   const [error, setError] = useState(false);
   const [verificando, setVerificando] = useState(false);
 
-  if (!isOpen) return null;
-
-  const verificarPin = async (nuevoPin) => {
+  const verificarPin = useCallback(async (nuevoPin) => {
     setVerificando(true);
     try {
       const res = await fetch('/api/caja/login', {
@@ -30,29 +28,52 @@ export default function PinModal({ isOpen, onClose, onSuccess }) {
     } finally {
       setVerificando(false);
     }
-  };
+  }, [onSuccess]);
 
-  const handleDigit = (digit) => {
+  const handleDigit = useCallback((digit) => {
     if (verificando) return;
-    if (pin.length < 4) {
-      const nuevoPin = pin + digit;
-      setPin(nuevoPin);
-      setError(false);
-      if (nuevoPin.length === 4) {
-        verificarPin(nuevoPin);
+    setPin(prev => {
+      if (prev.length < 4) {
+        const nuevoPin = prev + digit;
+        setError(false);
+        if (nuevoPin.length === 4) {
+          verificarPin(nuevoPin);
+        }
+        return nuevoPin;
       }
-    }
-  };
+      return prev;
+    });
+  }, [verificando, verificarPin]);
 
-  const handleBackspace = () => {
+  const handleBackspace = useCallback(() => {
     setPin(prev => prev.slice(0, -1));
     setError(false);
-  };
+  }, []);
 
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     setPin('');
     setError(false);
-  };
+  }, []);
+
+  // Soporte para teclado físico (0-9, NumPad, Backspace, Escape)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key >= '0' && e.key <= '9') {
+        handleDigit(e.key);
+      } else if (e.key === 'Backspace') {
+        handleBackspace();
+      } else if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, handleDigit, handleBackspace, onClose]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
@@ -127,6 +148,10 @@ export default function PinModal({ isOpen, onClose, onSuccess }) {
           >
             ⌫
           </button>
+        </div>
+
+        <div className="mt-4 text-[11px] text-slate-400 font-medium">
+          💡 Podés tipear directamente con tu teclado físico o hacer clic en los números.
         </div>
 
       </div>
