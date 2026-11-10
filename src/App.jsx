@@ -10,6 +10,7 @@ import ChecklistView from './components/ChecklistView';
 import MarketingView from './components/MarketingView';
 import ConfiguracionView from './components/ConfiguracionView';
 import CargaRapidaModal from './components/CargaRapidaModal';
+import ManualView from './components/ManualView';
 import MomentsLogo from './components/MomentsLogo';
 
 import { 
@@ -570,6 +571,7 @@ export default function App() {
               usuarioActivo={usuarioActivo}
               onIrACaja={handleOpenPinModal}
               onIrAChecklist={() => setActiveTab('checklist')}
+              onIrAManual={() => setActiveTab('manual')}
               eventoDelDia={eventoActivo}
               eventos={eventos}
               movimientos={movimientos}
@@ -677,6 +679,16 @@ export default function App() {
                 </button>
               </div>
             )
+          )}
+
+          {/* 7. Pestaña Manual de Uso del Panel */}
+          {activeTab === 'manual' && (
+            <ManualView
+              onNavegarTab={(tabId) => setActiveTab(tabId)}
+              cajaDesbloqueada={cajaDesbloqueada}
+              onOpenPinModal={handleOpenPinModal}
+              usuarioActivo={usuarioActivo}
+            />
           )}
 
         </main>

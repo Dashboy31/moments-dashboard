@@ -24,7 +24,8 @@ import {
   Bell,
   HelpCircle,
   Building,
-  Hourglass
+  Hourglass,
+  BookOpen
 } from 'lucide-react';
 import { USUARIOS } from '../utils/mockData';
 
@@ -37,6 +38,7 @@ export default function SemanaAccionesView({
   usuarioActivo,
   onIrACaja,
   onIrAChecklist,
+  onIrAManual,
   eventoDelDia,
   eventos = [],
   movimientos = [],
@@ -481,15 +483,27 @@ export default function SemanaAccionesView({
               </p>
             </div>
           </div>
-          {esGerencia && onIrACaja && (
-            <button
-              onClick={onIrACaja}
-              className="text-xs font-bold text-[#5A6B4A] hover:text-[#2F3A2A] flex items-center gap-1 hover:underline"
-            >
-              <span>Ver en Caja</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {onIrAManual && (
+              <button
+                onClick={onIrAManual}
+                className="text-xs font-bold text-[#5A6B4A] hover:text-[#2F3A2A] flex items-center gap-1 hover:underline cursor-pointer"
+                title="Abrir Manual de Uso del Sistema"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-[#C6A96A]" />
+                <span>Manual de Uso</span>
+              </button>
+            )}
+            {esGerencia && onIrACaja && (
+              <button
+                onClick={onIrACaja}
+                className="text-xs font-bold text-[#5A6B4A] hover:text-[#2F3A2A] flex items-center gap-1 hover:underline cursor-pointer"
+              >
+                <span>Ver en Caja</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ALERTA SIMULADOR: Si el saldo cubre <= colchón de seguridad */}

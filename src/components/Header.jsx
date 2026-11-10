@@ -14,7 +14,8 @@ import {
   Sparkles,
   Users,
   ShieldCheck,
-  Sliders
+  Sliders,
+  BookOpen
 } from 'lucide-react';
 import { USUARIOS } from '../utils/mockData';
 import MomentsLogo from './MomentsLogo';
@@ -82,6 +83,14 @@ export default function Header({
       shortLabel: 'Config',
       icon: Sliders,
       protegido: true
+    },
+    {
+      id: 'manual',
+      number: '7',
+      label: 'Manual de Uso del Panel',
+      shortLabel: 'Manual',
+      icon: BookOpen,
+      protegido: false
     }
   ];
 
@@ -189,6 +198,20 @@ export default function Header({
               ))}
             </select>
           </div>
+
+          {/* Botón de Acceso Directo al Manual */}
+          <button
+            onClick={() => setActiveTab('manual')}
+            title="Abrir Manual Interactivo del Dashboard"
+            className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-xl transition shadow-sm cursor-pointer border ${
+              activeTab === 'manual'
+                ? 'bg-[#C6A96A] text-[#1E251B] border-[#C6A96A]'
+                : 'bg-[#2F3A2A]/90 text-[#F6F3E9] hover:bg-[#384532] border-[#C6A96A]/40'
+            }`}
+          >
+            <BookOpen className={`w-3.5 h-3.5 ${activeTab === 'manual' ? 'text-[#1E251B]' : 'text-[#C6A96A]'}`} />
+            <span className="hidden sm:inline">Manual</span>
+          </button>
 
           {/* Estado de Caja y botón de bloqueo */}
           {cajaDesbloqueada && (
