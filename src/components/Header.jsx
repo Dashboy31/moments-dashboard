@@ -13,7 +13,8 @@ import {
   LogOut,
   Sparkles,
   Users,
-  ShieldCheck
+  ShieldCheck,
+  Sliders
 } from 'lucide-react';
 import { USUARIOS } from '../utils/mockData';
 import MomentsLogo from './MomentsLogo';
@@ -73,6 +74,14 @@ export default function Header({
       shortLabel: 'Ventas',
       icon: TrendingUp,
       protegido: false
+    },
+    {
+      id: 'configuracion',
+      number: '6',
+      label: 'Configuración',
+      shortLabel: 'Config',
+      icon: Sliders,
+      protegido: true
     }
   ];
 

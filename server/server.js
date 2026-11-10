@@ -42,7 +42,45 @@ app.use(express.json({ limit: '5mb' }));
 // ---------------------------------------------------------------------------
 // Base de datos (archivo JSON en disco persistente, escrituras atómicas)
 // ---------------------------------------------------------------------------
-const COLECCIONES = ['eventos', 'checklist', 'movimientos', 'actividades_semana'];
+const COLECCIONES = [
+  'eventos',
+  'checklist',
+  'movimientos',
+  'actividades_semana',
+  'eventos_finanzas',
+  'prestamos_tramos',
+  'proveedores_datos'
+];
+
+export const CONFIGURACION_DEFAULT = {
+  eventoMinimo: 4000000,
+  eventoBasePersonas: 85,
+  eventoBaseCosto: 7000000,
+  costoPromedioPlanificacion: 10000000,
+  tarifaAdultoVigente: 127000,
+  fijosReferenciaMes: 5000000,
+  margenVerdeMin: 20,
+  margenAmarilloMin: 0,
+  tramoPrestamoSugerido: 20000000,
+  colchonSeguridadEventos: 1,
+  responsablesSugeridos: {
+    fijos: 'Gabriela',
+    variables: 'Paulina',
+    ingresos: 'Jesica'
+  },
+  plantillaCostosFijos: [
+    { id: 'pf-1', concepto: 'Impuestos y Tasas Municipales', subcategoria: 'Impuestos', montoEstimado: 350000, diaVencimiento: 10, responsable: 'Gabriela' },
+    { id: 'pf-2', concepto: 'Servicio Eléctrico (Luz / Edemsa)', subcategoria: 'Luz', montoEstimado: 420000, diaVencimiento: 15, responsable: 'Gabriela' },
+    { id: 'pf-3', concepto: 'Servicio de Gas (Ecogas)', subcategoria: 'Gas', montoEstimado: 180000, diaVencimiento: 18, responsable: 'Gabriela' },
+    { id: 'pf-4', concepto: 'Servicio de Agua potable y riego', subcategoria: 'Agua', montoEstimado: 90000, diaVencimiento: 12, responsable: 'Gabriela' },
+    { id: 'pf-5', concepto: 'Honorarios Estudio Contable', subcategoria: 'Contador', montoEstimado: 220000, diaVencimiento: 5, responsable: 'Gabriela' },
+    { id: 'pf-6', concepto: 'Mantenimiento Parque y Jardinero mensual', subcategoria: 'Jardinero', montoEstimado: 280000, diaVencimiento: 8, responsable: 'Pablo' },
+    { id: 'pf-7', concepto: 'Servicio Seguridad Alarma y Monitoreo', subcategoria: 'Seguridad permanente', montoEstimado: 210000, diaVencimiento: 10, responsable: 'Gabriela' },
+    { id: 'pf-8', concepto: 'Administración del Salón', subcategoria: 'Administración', montoEstimado: 500000, diaVencimiento: 1, responsable: 'Gabriela' },
+    { id: 'pf-9', concepto: 'Honorarios Socios Operativos', subcategoria: 'Socios', montoEstimado: 2750000, diaVencimiento: 1, responsable: 'Jesica' }
+  ],
+  mapeosExcel: {}
+};
 
 function dbInicial() {
   return {
@@ -51,12 +89,29 @@ function dbInicial() {
     eventos: EVENTOS_SEED,
     checklist: CHECKLIST_INICIAL,
     movimientos: MOVIMIENTOS_SEED,
-    actividades_semana: ACTIVIDADES_SEMANA_SEED
+    actividades_semana: ACTIVIDADES_SEMANA_SEED,
+    eventos_finanzas: [],
+    prestamos_tramos: [],
+    proveedores_datos: [],
+    configuracion: { ...CONFIGURACION_DEFAULT }
   };
 }
 
 function cargarDb() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
+
+  // 1. Respaldo preventivo antes de cualquier migración (moments_db.pre-migracion-<fecha>.json)
+  const hoyFecha = new Date().toISOString().slice(0, 10);
+  const preMigracionFile = path.join(DATA_DIR, `moments_db.pre-migracion-${hoyFecha}.json`);
+  if (fs.existsSync(DATA_FILE) && !fs.existsSync(preMigracionFile)) {
+    try {
+      fs.copyFileSync(DATA_FILE, preMigracionFile);
+      console.log('✅ Respaldo pre-migración creado en:', preMigracionFile);
+    } catch (e) {
+      console.warn('⚠️ No se pudo crear copia pre-migración:', e.message);
+    }
+  }
+
   if (fs.existsSync(DATA_FILE)) {
     try {
       const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
@@ -64,7 +119,15 @@ function cargarDb() {
       if (!Array.isArray(data.actividades_semana) || data.actividades_semana.length === 0) {
         data.actividades_semana = ACTIVIDADES_SEMANA_SEED;
       }
-      // Normalizar caja en movimientos si falta
+
+      // Configuración editable
+      if (!data.configuracion || typeof data.configuracion !== 'object') {
+        data.configuracion = { ...CONFIGURACION_DEFAULT };
+      } else {
+        data.configuracion = { ...CONFIGURACION_DEFAULT, ...data.configuracion };
+      }
+
+      // Normalizar campos en movimientos
       if (Array.isArray(data.movimientos)) {
         data.movimientos.forEach(m => {
           if (!m.caja) {
@@ -73,8 +136,56 @@ function cargarDb() {
             else if (String(m.concepto || '').toLowerCase().includes('mercado') || String(m.concepto || '').toLowerCase().includes('mp')) m.caja = 'mercado_pago';
             else m.caja = 'banco_nacion';
           }
+          if (m.eventoId === undefined) m.eventoId = null;
+          if (m.origen === undefined) m.origen = null;
+          if (m.proveedor === undefined) m.proveedor = null;
+          if (!m.cargadoPor) m.cargadoPor = m.cargo || 'Jesica';
         });
       }
+
+      // Precarga de eventos de Noviembre y Diciembre 2026 (SOLO fechas sin evento previo)
+      const fechasNoviembre = ['2026-11-06', '2026-11-07', '2026-11-13', '2026-11-14', '2026-11-20', '2026-11-21', '2026-11-22', '2026-11-27'];
+      const fechasDiciembre = ['2026-12-06', '2026-12-07', '2026-12-11', '2026-12-12', '2026-12-13', '2026-12-17', '2026-12-18', '2026-12-19'];
+      const fechasPrecarga = [...fechasNoviembre, ...fechasDiciembre];
+
+      fechasPrecarga.forEach(f => {
+        const yaExiste = data.eventos.some(e => e.fecha === f);
+        if (!yaExiste) {
+          data.eventos.push({
+            id: `ev-precarga-${f}`,
+            titulo: 'Evento por confirmar',
+            tipo: 'a_definir',
+            fecha: f,
+            horaInicio: '21:00',
+            horaFin: '05:00',
+            cliente: 'A definir',
+            invitadosCena: 0,
+            invitadosBrindis: 0,
+            responsable: 'Jesica',
+            estado: 'Tentativo',
+            notas: 'Precargado desde planilla de gerencia – completar tipo y personas'
+          });
+        }
+      });
+
+      // Asegurar eventos_finanzas
+      if (!Array.isArray(data.eventos_finanzas)) data.eventos_finanzas = [];
+      data.eventos.forEach(ev => {
+        if (ev.tipo !== 'mantenimiento') {
+          const existeFin = data.eventos_finanzas.find(ef => ef.eventoId === ev.id);
+          if (!existeFin) {
+            const personasCena = Number(ev.invitadosCena) || 0;
+            const personasBase = personasCena > 0 ? personasCena : 85;
+            data.eventos_finanzas.push({
+              id: `efin-${ev.id}`,
+              eventoId: ev.id,
+              ingresoPactado: personasBase * (data.configuracion?.tarifaAdultoVigente || 127000),
+              notasFinancieras: personasCena > 0 ? 'Calculado base por invitados cena' : 'Presupuesto de referencia base'
+            });
+          }
+        }
+      });
+
       if (typeof data.version !== 'number') data.version = 1;
       return data;
     } catch (e) {
@@ -239,6 +350,144 @@ rutasColeccion('eventos');
 rutasColeccion('checklist');
 rutasColeccion('actividades_semana');
 rutasColeccion('movimientos', true);
+rutasColeccion('eventos_finanzas', true);
+rutasColeccion('prestamos_tramos', true);
+rutasColeccion('proveedores_datos', true);
+
+// ---------------------------------------------------------------------------
+// Carga Rápida de Gastos e Ingresos (abierta a todo el personal, sin ver montos)
+// ---------------------------------------------------------------------------
+app.post('/api/movimientos/rapido', (req, res) => {
+  const {
+    fecha,
+    tipo = 'egreso',
+    categoria,
+    subcategoria,
+    monto,
+    caja = 'efectivo',
+    concepto,
+    eventoId,
+    proveedor,
+    notas,
+    usuarioNombre = 'Equipo Moments'
+  } = req.body || {};
+
+  const numMonto = Number(monto);
+  if (!numMonto || isNaN(numMonto) || numMonto <= 0) {
+    return res.status(400).json({ ok: false, error: 'Monto inválido' });
+  }
+
+  const ahora = new Date();
+  const fechaStr = fecha || ahora.toISOString().slice(0, 10);
+  const horaStr = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
+  const cargadoPor = `${usuarioNombre} · ${ahora.toLocaleDateString('es-AR')} ${horaStr}`;
+
+  const nuevoMovimiento = {
+    id: `mov-rap-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    fecha: fechaStr,
+    concepto: concepto ? String(concepto).trim() : `[Carga Rápida] ${subcategoria || categoria || 'Operación'}`,
+    tipo: tipo === 'ingreso' ? 'ingreso' : 'egreso',
+    categoria: categoria || 'Variables – Otros',
+    subcategoria: subcategoria || 'Proveedores de evento',
+    monto: numMonto,
+    caja: caja || 'efectivo',
+    metodoPago: caja === 'naranja' ? 'Tarjeta Naranja' : (caja === 'banco_nacion' ? 'Transferencia BNA' : (caja === 'mercado_pago' ? 'Mercado Pago' : 'Efectivo')),
+    cargo: usuarioNombre,
+    cargadoPor,
+    eventoId: eventoId || null,
+    proveedor: proveedor ? String(proveedor).trim() : null,
+    origen: tipo === 'ingreso' ? (req.body?.origen || 'Otro') : null,
+    notas: notas ? String(notas).trim() : ''
+  };
+
+  if (!Array.isArray(db.movimientos)) db.movimientos = [];
+  db.movimientos.unshift(nuevoMovimiento);
+  guardar();
+
+  // Devuelve únicamente { ok: true } para proteger la privacidad económica
+  return res.json({ ok: true });
+});
+
+// ---------------------------------------------------------------------------
+// Fichas Financieras de Eventos (Solo Gerencia con PIN)
+// ---------------------------------------------------------------------------
+app.get('/api/eventos_finanzas', requierePin, (req, res) => {
+  res.json({ version: db.version, eventos_finanzas: db.eventos_finanzas || [] });
+});
+
+// ---------------------------------------------------------------------------
+// Configuración del Salón (Solo Gerencia con PIN)
+// ---------------------------------------------------------------------------
+app.get('/api/configuracion', requierePin, (req, res) => {
+  res.json({ version: db.version, configuracion: db.configuracion || CONFIGURACION_DEFAULT });
+});
+
+app.put('/api/configuracion', requierePin, (req, res) => {
+  db.configuracion = { ...(db.configuracion || CONFIGURACION_DEFAULT), ...req.body };
+  guardar();
+  res.json({ ok: true, version: db.version, configuracion: db.configuracion });
+});
+
+// ---------------------------------------------------------------------------
+// Registro de Tramos de Préstamo Familiar (Solo Gerencia con PIN)
+// ---------------------------------------------------------------------------
+app.get('/api/prestamos_tramos', requierePin, (req, res) => {
+  res.json({ version: db.version, prestamos_tramos: db.prestamos_tramos || [] });
+});
+
+app.post('/api/prestamos_tramos', requierePin, (req, res) => {
+  const { fecha, monto, entregadoPor, cajaDestino = 'banco_nacion', notas } = req.body || {};
+  const numMonto = Number(monto);
+  if (!numMonto || numMonto <= 0) return res.status(400).json({ error: 'Monto inválido' });
+
+  const tramoId = `tramo-${Date.now()}`;
+  const movId = `mov-tramo-${Date.now()}`;
+  const fechaStr = fecha || new Date().toISOString().slice(0, 10);
+  const aportante = entregadoPor || 'Préstamo Familiar';
+
+  // 1. Crear movimiento de ingreso en la caja seleccionada
+  const movIngreso = {
+    id: movId,
+    fecha: fechaStr,
+    concepto: `[Financiamiento] Tramo recibido de préstamo familiar (${aportante})`,
+    tipo: 'ingreso',
+    categoria: 'Financiamiento',
+    subcategoria: 'Préstamo familiar',
+    monto: numMonto,
+    caja: cajaDestino,
+    metodoPago: cajaDestino === 'efectivo' ? 'Efectivo' : 'Transferencia',
+    cargo: aportante,
+    cargadoPor: `Gerencia · ${fechaStr}`,
+    notas: notas || 'Ingreso de fondos por tramo de préstamo familiar'
+  };
+
+  if (!Array.isArray(db.movimientos)) db.movimientos = [];
+  db.movimientos.unshift(movIngreso);
+
+  // 2. Registrar en prestamos_tramos
+  const nuevoTramo = {
+    id: tramoId,
+    fecha: fechaStr,
+    monto: numMonto,
+    entregadoPor: aportante,
+    cajaDestino,
+    notas: notas || '',
+    movimientoId: movId
+  };
+
+  if (!Array.isArray(db.prestamos_tramos)) db.prestamos_tramos = [];
+  db.prestamos_tramos.unshift(nuevoTramo);
+
+  guardar();
+  res.json({ ok: true, version: db.version, tramo: nuevoTramo, movimiento: movIngreso });
+});
+
+// ---------------------------------------------------------------------------
+// Directorio de Proveedores (Solo Gerencia con PIN)
+// ---------------------------------------------------------------------------
+app.get('/api/proveedores_datos', requierePin, (req, res) => {
+  res.json({ version: db.version, proveedores_datos: db.proveedores_datos || [] });
+});
 
 // Confirmar asistencia a reunión
 app.post('/api/actividades_semana/:id/confirmar', (req, res) => {

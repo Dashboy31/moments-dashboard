@@ -54,33 +54,126 @@ export const CAJAS_LISTA = [
 ];
 
 export const CATEGORIAS_CAJA = {
-  Variables: [
+  'Variables – Insumos': [
+    'Carnes',
+    'Verduras',
+    'Bebida',
+    'Fiambres'
+  ],
+  'Variables – Personal': [
+    'Cocina',
+    'Limpieza',
+    'Mozos',
+    'Música'
+  ],
+  'Variables – Otros': [
+    'Librería',
     'Proveedores de evento',
-    'Personal eventual (Mozos/Barra/Seguridad)',
-    'Mantenimiento de evento',
-    'Música / DJ / Sonido',
-    'Carnes y Alimentos',
-    'Bebidas y Alcohol',
     'Marketing y Publicidad'
   ],
   Fijos: [
-    'Impuestos y Servicios (Luz/Gas/Tasas)',
-    'Seguridad permanente',
     'Administración',
+    'Socios',
+    'Jardinero',
+    'Impuestos',
+    'Agua',
+    'Luz',
+    'Gas',
     'Contador',
-    'Jardinero mensual'
+    'Seguridad permanente'
   ],
   'Retiros personales': [
     'Retiro Leandro',
     'Retiro Jesica',
     'Retiro Iris'
   ],
+  Financiamiento: [
+    'Préstamo familiar',
+    'Devolución préstamo familiar'
+  ],
   'Otros / No recurrente': [
     'Mejoras edilicias / Inversión',
     'Reparaciones e imprevistos',
+    'Traspaso interno',
     'Varios'
   ]
 };
+
+// Mapa de retrocompatibilidad para subcategorías cargadas históricamente
+export function normalizarCategoriaMovimiento(cat, subcat) {
+  const s = String(subcat || '').trim();
+  const c = String(cat || '').trim();
+
+  if (c.startsWith('Variables – ') || c === 'Financiamiento') {
+    return { categoria: c, subcategoria: s };
+  }
+
+  if (s === 'Carnes y Alimentos' || s.toLowerCase().includes('carne') || s.toLowerCase().includes('alimento')) {
+    return { categoria: 'Variables – Insumos', subcategoria: 'Carnes' };
+  }
+  if (s === 'Bebidas y Alcohol' || s.toLowerCase().includes('bebida') || s.toLowerCase().includes('alcohol')) {
+    return { categoria: 'Variables – Insumos', subcategoria: 'Bebida' };
+  }
+  if (s === 'Personal eventual (Mozos/Barra/Seguridad)' || s.toLowerCase().includes('mozo')) {
+    return { categoria: 'Variables – Personal', subcategoria: 'Mozos' };
+  }
+  if (s === 'Música / DJ / Sonido' || s.toLowerCase().includes('dj') || s.toLowerCase().includes('sonido') || s.toLowerCase().includes('música')) {
+    return { categoria: 'Variables – Personal', subcategoria: 'Música' };
+  }
+  if (s === 'Marketing y Publicidad' || s.toLowerCase().includes('marketing') || s.toLowerCase().includes('publicidad')) {
+    return { categoria: 'Variables – Otros', subcategoria: 'Marketing y Publicidad' };
+  }
+  if (s === 'Mantenimiento de evento' || s === 'Proveedores de evento' || s.toLowerCase().includes('proveedor')) {
+    return { categoria: 'Variables – Otros', subcategoria: 'Proveedores de evento' };
+  }
+  if (s === 'Impuestos y Servicios (Luz/Gas/Tasas)' || s.toLowerCase().includes('impuesto') || s.toLowerCase().includes('tasa')) {
+    return { categoria: 'Fijos', subcategoria: 'Impuestos' };
+  }
+  if (s.toLowerCase().includes('luz') || s.toLowerCase().includes('edemsa')) {
+    return { categoria: 'Fijos', subcategoria: 'Luz' };
+  }
+  if (s.toLowerCase().includes('gas') || s.toLowerCase().includes('ecogas')) {
+    return { categoria: 'Fijos', subcategoria: 'Gas' };
+  }
+  if (s.toLowerCase().includes('agua')) {
+    return { categoria: 'Fijos', subcategoria: 'Agua' };
+  }
+  if (s === 'Jardinero mensual' || s.toLowerCase().includes('jardin')) {
+    return { categoria: 'Fijos', subcategoria: 'Jardinero' };
+  }
+  if (s === 'Contador' || s.toLowerCase().includes('contab')) {
+    return { categoria: 'Fijos', subcategoria: 'Contador' };
+  }
+  if (s === 'Seguridad permanente' || s.toLowerCase().includes('alarma') || s.toLowerCase().includes('seguridad')) {
+    return { categoria: 'Fijos', subcategoria: 'Seguridad permanente' };
+  }
+  if (s === 'Administración' || s.toLowerCase().includes('admin')) {
+    return { categoria: 'Fijos', subcategoria: 'Administración' };
+  }
+  if (c === 'Variables') {
+    return { categoria: 'Variables – Otros', subcategoria: s || 'Proveedores de evento' };
+  }
+  return { categoria: c || 'Variables – Otros', subcategoria: s || 'Varios' };
+}
+
+export function formatARS(num) {
+  const val = Number(num);
+  if (isNaN(val) || val === null || val === undefined) return '$ 0';
+  const entero = Math.round(val);
+  return '$ ' + entero.toLocaleString('es-AR');
+}
+
+export const TIPOS_EVENTO_LISTA = [
+  { id: '15_anos', label: '15 Años', shortLabel: '15 Años', color: 'pink' },
+  { id: 'casamiento', label: 'Casamiento', shortLabel: 'Boda', color: 'amber' },
+  { id: 'egresados', label: 'Egresados', shortLabel: 'Egresados', color: 'indigo' },
+  { id: 'aniversario', label: 'Cumple de décadas / Aniversario', shortLabel: 'Aniversario', color: 'emerald' },
+  { id: 'tardeo', label: 'Tardeo', shortLabel: 'Tardeo', color: 'orange' },
+  { id: 'prestamo_salon', label: 'Préstamo del salón', shortLabel: 'Préstamo', color: 'purple' },
+  { id: 'mantenimiento', label: 'Mantenimiento / Operativo', shortLabel: 'Mantenimiento', color: 'slate' },
+  { id: 'otro', label: 'Otro', shortLabel: 'Otro', color: 'blue' },
+  { id: 'a_definir', label: 'A definir', shortLabel: 'A definir', color: 'cyan' }
+];
 
 export const MOVIMIENTOS_SEED = [
   {

@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
+import * as XLSX from 'xlsx';
 import { 
   Plus, 
   Download, 
+  Upload,
   Search, 
   Filter, 
   Trash2, 
@@ -21,11 +23,27 @@ import {
   Pencil,
   Check,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle,
+  HelpCircle,
+  ChevronRight,
+  ChevronLeft,
+  FileSpreadsheet,
+  Building,
+  Store,
+  Clock,
+  Info,
+  RefreshCw,
+  Phone
 } from 'lucide-react';
-import { CATEGORIAS_CAJA, USUARIOS } from '../utils/mockData';
+import { 
+  CATEGORIAS_CAJA, 
+  USUARIOS, 
+  formatARS, 
+  normalizarCategoriaMovimiento,
+  CAJAS_LISTA
+} from '../utils/mockData';
 
-// Definición oficial de las 4 Cajas solicitadas por la dueña de Moments + Vista General Consolidada
 export const CAJAS_DEF = [
   {
     id: 'naranja',
@@ -89,7 +107,6 @@ export const CAJAS_DEF = [
   }
 ];
 
-// Helper para normalizar la caja de cualquier movimiento existente
 export function getCajaMovimiento(m) {
   if (m?.caja && ['naranja', 'banco_nacion', 'mercado_pago', 'efectivo'].includes(m.caja)) {
     return m.caja;
@@ -98,715 +115,1865 @@ export function getCajaMovimiento(m) {
   const concepto = String(m?.concepto || '').toLowerCase();
   if (metodo.includes('efectivo') || concepto.includes('efectivo')) return 'efectivo';
   if (metodo.includes('naranja') || metodo.includes('tarjeta') || concepto.includes('naranja')) return 'naranja';
-  if (metodo.includes('mercado') || metodo.includes('mp') || concepto.includes('mercado') || concepto.includes('qr')) return 'mercado_pago';
+  if (metodo.includes('mercado') || metodo.includes('mp') || concepto.includes('mercado') || concepto.includes('mp')) return 'mercado_pago';
   return 'banco_nacion';
 }
 
 export default function CajaView({ 
   movimientos = [], 
   onAgregarMovimiento, 
-  onEditarMovimiento,
+  onEditarMovimiento, 
   onEliminarMovimiento, 
-  usuarioActivo 
+  usuarioActivo,
+  eventos = [],
+  configuracion,
+  onGuardarConfiguracion,
+  prestamosTramos = [],
+  onRegistrarTramoPrestamo,
+  onEliminarTramoPrestamo,
+  proveedoresDatos = [],
+  onGuardarProveedorDatos
 }) {
-  // Pestaña activa dentro de Caja: 'naranja' | 'banco_nacion' | 'mercado_pago' | 'efectivo' | 'general'
-  const [subTabActiva, setSubTabActiva] = useState('naranja');
+  // Pestañas principales de Caja: 'cajas' | 'resultado' | 'fijos' | 'proveedores' | 'importar'
+  const [seccionCaja, setSeccionCaja] = useState('cajas');
 
-  // Filtros
-  const [filtroMes, setFiltroMes] = useState('2026-10');
-  const [filtroTipo, setFiltroTipo] = useState('todos'); // 'todos' | 'ingreso' | 'egreso'
+  // Sub-pestaña de cuentas en 'cajas': 'naranja' | 'banco_nacion' | 'mercado_pago' | 'efectivo' | 'general'
+  const [subTabActiva, setSubTabActiva] = useState('general');
+
+  // Filtros de tabla
+  const mesActualStr = new Date().toISOString().slice(0, 7);
+  const [filtroMes, setFiltroMes] = useState(mesActualStr); // Arranca en el mes actual
+  const [filtroTipo, setFiltroTipo] = useState('todos'); // 'todos', 'ingreso', 'egreso'
   const [busqueda, setBusqueda] = useState('');
-  const [filtroCajaGeneral, setFiltroCajaGeneral] = useState('todas'); // para filtrar en la pestaña general
+  const [filtroCajaGeneral, setFiltroCajaGeneral] = useState('todas');
 
   // Modales
   const [modalAbierto, setModalAbierto] = useState(false);
   const [modoModal, setModoModal] = useState('nuevo'); // 'nuevo' | 'editar' | 'traspaso'
   const [movimientoAEditar, setMovimientoAEditar] = useState(null);
 
-  // Formulario de Movimiento
+  // Formulario movimiento
   const [formCaja, setFormCaja] = useState('naranja');
   const [formFecha, setFormFecha] = useState(new Date().toISOString().split('T')[0]);
   const [formConcepto, setFormConcepto] = useState('');
   const [formTipo, setFormTipo] = useState('egreso');
-  const [formCategoria, setFormCategoria] = useState('Variables');
+  const [formCategoria, setFormCategoria] = useState('Variables – Otros');
   const [formSubcategoria, setFormSubcategoria] = useState('Proveedores de evento');
   const [formMonto, setFormMonto] = useState('');
-  const [formMetodo, setFormMetodo] = useState('Tarjeta Naranja');
+  const [formMetodo, setFormMetodo] = useState('Transferencia');
   const [formCargo, setFormCargo] = useState(usuarioActivo?.nombre || 'Jesica');
+  const [formEventoId, setFormEventoId] = useState('');
+  const [formOrigen, setFormOrigen] = useState('Seña');
+  const [formProveedor, setFormProveedor] = useState('');
   const [formNotas, setFormNotas] = useState('');
 
-  // Formulario de Traspaso entre Cajas
+  // Formulario de Traspaso
   const [traspasoOrigen, setTraspasoOrigen] = useState('efectivo');
   const [traspasoDestino, setTraspasoDestino] = useState('banco_nacion');
   const [traspasoMonto, setTraspasoMonto] = useState('');
   const [traspasoFecha, setTraspasoFecha] = useState(new Date().toISOString().split('T')[0]);
-  const [traspasoConcepto, setTraspasoConcepto] = useState('Depósito de efectivo en cuenta BNA');
+  const [traspasoConcepto, setTraspasoConcepto] = useState('Traspaso interno entre cuentas');
 
-  const formatARS = (num) => {
-    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(num || 0);
+  // Modal registrar tramo de préstamo
+  const [modalTramoAbierto, setModalTramoAbierto] = useState(false);
+  const [tramoMonto, setTramoMonto] = useState('');
+  const [tramoFecha, setTramoFecha] = useState(new Date().toISOString().split('T')[0]);
+  const [tramoEntregadoPor, setTramoEntregadoPor] = useState('Préstamo Familiar (Leandro / Familia)');
+  const [tramoCajaDestino, setTramoCajaDestino] = useState('banco_nacion');
+  const [tramoNotas, setTramoNotas] = useState('');
+
+  // ===========================================================================
+  // SIMULADOR DE COBERTURA Y PRÉSTAMO FAMILIAR (PUNTO 12)
+  // ===========================================================================
+  const cfg = configuracion || {
+    costoPromedioPlanificacion: 10000000,
+    tramoPrestamoSugerido: 20000000,
+    colchonSeguridadEventos: 1,
+    tarifaAdultoVigente: 127000,
+    eventoBaseCosto: 7000000,
+    eventoBasePersonas: 85
   };
 
-  // ---------------------------------------------------------------------------
-  // Cálculos de Saldos por Caja y General (en tiempo real)
-  // ---------------------------------------------------------------------------
-  const metricasPorCaja = useMemo(() => {
-    const mapa = {
-      naranja: { ingresos: 0, egresos: 0, saldo: 0, retiros: 0, cantidad: 0 },
-      banco_nacion: { ingresos: 0, egresos: 0, saldo: 0, retiros: 0, cantidad: 0 },
-      mercado_pago: { ingresos: 0, egresos: 0, saldo: 0, retiros: 0, cantidad: 0 },
-      efectivo: { ingresos: 0, egresos: 0, saldo: 0, retiros: 0, cantidad: 0 },
-      general: { ingresos: 0, egresos: 0, saldo: 0, retiros: 0, cantidad: 0 }
+  // Eventos futuros a partir de hoy (sin mantenimiento)
+  const hoyStr = new Date().toISOString().split('T')[0];
+  const eventosFuturos = useMemo(() => {
+    return (eventos || [])
+      .filter(e => e.tipo !== 'mantenimiento' && e.fecha >= hoyStr)
+      .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+  }, [eventos, hoyStr]);
+
+  const [simCostoPromedio, setSimCostoPromedio] = useState(() => cfg.costoPromedioPlanificacion || 10000000);
+  const [simCantEventos, setSimCantEventos] = useState(() => Math.max(1, eventosFuturos.length || 10));
+  const [simIngresosInesperados, setSimIngresosInesperados] = useState(0);
+  const [simCajaManualOverride, setSimCajaManualOverride] = useState(null);
+
+  // Totales de movimientos y saldos reales de cajas
+  const { metricasPorCaja, saldoRealSinPrestamos, totalTramosRecibidos, totalDevolucionesPrestamo } = useMemo(() => {
+    const res = {
+      naranja: { ingresos: 0, egresos: 0, saldo: 0 },
+      banco_nacion: { ingresos: 0, egresos: 0, saldo: 0 },
+      mercado_pago: { ingresos: 0, egresos: 0, saldo: 0 },
+      efectivo: { ingresos: 0, egresos: 0, saldo: 0 },
+      general: { ingresos: 0, egresos: 0, saldo: 0 }
     };
 
-    const itemsParaCalculo = filtroMes === 'todos' 
-      ? movimientos 
-      : movimientos.filter(m => m.fecha && m.fecha.startsWith(filtroMes));
+    let tramosSum = 0;
+    let devolucionesSum = 0;
 
-    itemsParaCalculo.forEach(m => {
-      const cajaKey = getCajaMovimiento(m);
+    (movimientos || []).forEach(m => {
+      const c = getCajaMovimiento(m);
       const val = Number(m.monto) || 0;
       const esIngreso = m.tipo === 'ingreso';
 
-      if (mapa[cajaKey]) {
-        mapa[cajaKey].cantidad += 1;
-        if (esIngreso) {
-          mapa[cajaKey].ingresos += val;
-          mapa[cajaKey].saldo += val;
-        } else {
-          mapa[cajaKey].egresos += val;
-          mapa[cajaKey].saldo -= val;
-          if (m.categoria === 'Retiros personales') {
-            mapa[cajaKey].retiros += val;
-          }
-        }
-      }
-
-      // Consolidado general
-      mapa.general.cantidad += 1;
       if (esIngreso) {
-        mapa.general.ingresos += val;
-        mapa.general.saldo += val;
+        if (res[c]) res[c].ingresos += val;
+        res.general.ingresos += val;
       } else {
-        mapa.general.egresos += val;
-        mapa.general.saldo -= val;
-        if (m.categoria === 'Retiros personales') {
-          mapa.general.retiros += val;
-        }
+        if (res[c]) res[c].egresos += val;
+        res.general.egresos += val;
+      }
+
+      // Identificar si es préstamo o devolución
+      const subcat = String(m.subcategoria || '').toLowerCase();
+      const conc = String(m.concepto || '').toLowerCase();
+      if (esIngreso && (subcat.includes('préstamo familiar') || conc.includes('préstamo familiar') || conc.includes('tramo recibido'))) {
+        tramosSum += val;
+      } else if (!esIngreso && (subcat.includes('devolución préstamo') || conc.includes('devolución préstamo'))) {
+        devolucionesSum += val;
       }
     });
 
-    return mapa;
-  }, [movimientos, filtroMes]);
+    for (const key of ['naranja', 'banco_nacion', 'mercado_pago', 'efectivo', 'general']) {
+      res[key].saldo = res[key].ingresos - res[key].egresos;
+    }
 
-  // Desglose de gastos por categoría para el general o caja seleccionada
-  const desgloseCategorias = useMemo(() => {
-    const desglose = {};
-    const items = filtroMes === 'todos' 
-      ? movimientos 
-      : movimientos.filter(m => m.fecha && m.fecha.startsWith(filtroMes));
+    // Saldo real sin contar los tramos de préstamo para no duplicarlos
+    const saldoSinPrestamos = Math.max(0, res.general.saldo - tramosSum);
 
-    const filtradosPorCaja = subTabActiva === 'general'
-      ? items
-      : items.filter(m => getCajaMovimiento(m) === subTabActiva);
+    return {
+      metricasPorCaja: res,
+      saldoRealSinPrestamos: saldoSinPrestamos,
+      totalTramosRecibidos: tramosSum,
+      totalDevolucionesPrestamo: devolucionesSum
+    };
+  }, [movimientos]);
 
-    filtradosPorCaja.forEach(m => {
-      if (m.tipo === 'egreso') {
-        const val = Number(m.monto) || 0;
-        const cat = m.categoria || 'Otros / No recurrente';
-        desglose[cat] = (desglose[cat] || 0) + val;
-      }
+  // CÁLCULOS DEL SIMULADOR SEGÚN FÓRMULAS EXACTAS:
+  const simCajaActual = simCajaManualOverride !== null ? simCajaManualOverride : saldoRealSinPrestamos;
+  const simCostoEventos = simCantEventos * simCostoPromedio;
+  const simDisponible = simCajaActual + Number(simIngresosInesperados || 0);
+  const simPrestamoNecesario = Math.max(0, simCostoEventos - simDisponible);
+  const simPrestamoRecibido = totalTramosRecibidos;
+  const simFaltaPedir = Math.max(0, simPrestamoNecesario - simPrestamoRecibido);
+  const simCajaParaOperar = simDisponible + simPrestamoRecibido;
+  const simEventosCubiertos = simCostoPromedio > 0 ? Math.floor(simCajaParaOperar / simCostoPromedio) : 0;
+  const simSaldoAdeudado = Math.max(0, simPrestamoRecibido - totalDevolucionesPrestamo);
+
+  // Alerta "Pedir próximo tramo"
+  const colchon = cfg.colchonSeguridadEventos || 1;
+  const costoColchon = colchon * simCostoPromedio;
+  const alertaTramoActiva = simCajaParaOperar < costoColchon && simFaltaPedir > 0;
+  const montoTramoSugerido = Math.min(cfg.tramoPrestamoSugerido || 20000000, simFaltaPedir);
+  const proximoEvento = eventosFuturos[0] || null;
+
+  // Lista de meses disponibles para filtro
+  const mesesDisponibles = useMemo(() => {
+    const setM = new Set();
+    setM.add(mesActualStr);
+    (movimientos || []).forEach(m => {
+      if (m.fecha && m.fecha.length >= 7) setM.add(m.fecha.slice(0, 7));
     });
+    return Array.from(setM).sort().reverse();
+  }, [movimientos, mesActualStr]);
 
-    return desglose;
-  }, [movimientos, filtroMes, subTabActiva]);
-
-  // Lista filtrada para la tabla
+  // Movimientos filtrados para la tabla
   const movimientosFiltrados = useMemo(() => {
-    return movimientos.filter(m => {
-      const cajaKey = getCajaMovimiento(m);
-
-      // Si estamos en una pestaña de caja específica (Naranja, BNA, MP, Efectivo), solo mostrar esa caja
-      if (subTabActiva !== 'general' && cajaKey !== subTabActiva) {
-        return false;
-      }
-
-      // Si estamos en General, pero el usuario filtró por una caja específica dentro de General
-      if (subTabActiva === 'general' && filtroCajaGeneral !== 'todas' && cajaKey !== filtroCajaGeneral) {
-        return false;
-      }
-
-      // Filtro mes
-      if (filtroMes !== 'todos' && (!m.fecha || !m.fecha.startsWith(filtroMes))) {
-        return false;
-      }
-
-      // Filtro tipo
-      if (filtroTipo !== 'todos' && m.tipo !== filtroTipo) {
-        return false;
-      }
-
-      // Búsqueda de texto libre
+    return (movimientos || []).filter(m => {
+      const c = getCajaMovimiento(m);
+      if (subTabActiva !== 'general' && c !== subTabActiva) return false;
+      if (subTabActiva === 'general' && filtroCajaGeneral !== 'todas' && c !== filtroCajaGeneral) return false;
+      if (filtroMes !== 'todos' && (!m.fecha || !m.fecha.startsWith(filtroMes))) return false;
+      if (filtroTipo !== 'todos' && m.tipo !== filtroTipo) return false;
       if (busqueda.trim() !== '') {
-        const query = busqueda.toLowerCase();
+        const q = busqueda.toLowerCase();
         const coincide = 
-          (m.concepto && m.concepto.toLowerCase().includes(query)) ||
-          (m.categoria && m.categoria.toLowerCase().includes(query)) ||
-          (m.subcategoria && m.subcategoria.toLowerCase().includes(query)) ||
-          (m.cargo && m.cargo.toLowerCase().includes(query)) ||
-          (m.notas && m.notas.toLowerCase().includes(query)) ||
-          (m.metodoPago && m.metodoPago.toLowerCase().includes(query));
+          (m.concepto && m.concepto.toLowerCase().includes(q)) ||
+          (m.categoria && m.categoria.toLowerCase().includes(q)) ||
+          (m.subcategoria && m.subcategoria.toLowerCase().includes(q)) ||
+          (m.cargo && m.cargo.toLowerCase().includes(q)) ||
+          (m.proveedor && m.proveedor.toLowerCase().includes(q)) ||
+          (m.cargadoPor && m.cargadoPor.toLowerCase().includes(q));
         if (!coincide) return false;
       }
-
       return true;
     }).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
   }, [movimientos, subTabActiva, filtroCajaGeneral, filtroMes, filtroTipo, busqueda]);
 
-  // ---------------------------------------------------------------------------
-  // Handlers para abrir el modal preconfigurado
-  // ---------------------------------------------------------------------------
-  const abrirModalNuevo = (cajaPreseleccionada = null) => {
-    const destino = cajaPreseleccionada || (subTabActiva !== 'general' ? subTabActiva : 'naranja');
+  // Handlers para modales
+  const handleAbrirNuevo = (cajaDest = null) => {
+    const destino = cajaDest || (subTabActiva !== 'general' ? subTabActiva : 'naranja');
     setModoModal('nuevo');
     setMovimientoAEditar(null);
     setFormCaja(destino);
     setFormFecha(new Date().toISOString().split('T')[0]);
     setFormConcepto('');
     setFormTipo('egreso');
-    setFormCategoria('Variables');
-    setFormSubcategoria(CATEGORIAS_CAJA['Variables'][0]);
+    setFormCategoria('Variables – Otros');
+    setFormSubcategoria('Proveedores de evento');
     setFormMonto('');
+    setFormEventoId('');
+    setFormOrigen('Seña');
+    setFormProveedor('');
     setFormCargo(usuarioActivo?.nombre || 'Jesica');
     setFormNotas('');
-    
-    // Método de pago acorde a la caja
-    if (destino === 'naranja') setFormMetodo('Tarjeta Naranja');
-    else if (destino === 'banco_nacion') setFormMetodo('Transferencia BNA');
-    else if (destino === 'mercado_pago') setFormMetodo('Mercado Pago');
-    else setFormMetodo('Efectivo');
-
     setModalAbierto(true);
   };
 
-  const abrirModalEditar = (m) => {
+  const handleAbrirEditar = (m) => {
     setModoModal('editar');
     setMovimientoAEditar(m);
     setFormCaja(getCajaMovimiento(m));
     setFormFecha(m.fecha || new Date().toISOString().split('T')[0]);
     setFormConcepto(m.concepto || '');
     setFormTipo(m.tipo || 'egreso');
-    setFormCategoria(m.categoria || 'Variables');
-    setFormSubcategoria(m.subcategoria || '');
+    const norm = normalizarCategoriaMovimiento(m.categoria, m.subcategoria);
+    setFormCategoria(norm.categoria);
+    setFormSubcategoria(norm.subcategoria);
     setFormMonto(m.monto ? String(m.monto) : '');
-    setFormMetodo(m.metodoPago || 'Transferencia');
+    setFormEventoId(m.eventoId || '');
+    setFormOrigen(m.origen || 'Seña');
+    setFormProveedor(m.proveedor || '');
     setFormCargo(m.cargo || (usuarioActivo?.nombre || 'Jesica'));
     setFormNotas(m.notas || '');
     setModalAbierto(true);
   };
 
-  const abrirModalTraspaso = () => {
+  const handleAbrirTraspaso = () => {
     setModoModal('traspaso');
     setTraspasoOrigen(subTabActiva !== 'general' ? subTabActiva : 'efectivo');
     setTraspasoDestino(subTabActiva === 'banco_nacion' ? 'efectivo' : 'banco_nacion');
     setTraspasoMonto('');
     setTraspasoFecha(new Date().toISOString().split('T')[0]);
-    setTraspasoConcepto('Traspaso / Movimiento interno entre cuentas');
+    setTraspasoConcepto('Traspaso interno entre cuentas');
     setModalAbierto(true);
   };
 
-  // ---------------------------------------------------------------------------
-  // Guardado de Movimiento (Nuevo, Edición o Traspaso)
-  // ---------------------------------------------------------------------------
   const handleSubmit = (e) => {
     e.preventDefault();
 
     if (modoModal === 'traspaso') {
-      if (!traspasoMonto || Number(traspasoMonto) <= 0 || traspasoOrigen === traspasoDestino) {
+      const montoNum = Number(traspasoMonto);
+      if (!montoNum || montoNum <= 0 || traspasoOrigen === traspasoDestino) {
         alert('Ingresá un monto válido y seleccioná cajas de origen y destino distintas.');
         return;
       }
-      const montoNum = Number(traspasoMonto);
       const fecha = traspasoFecha || new Date().toISOString().split('T')[0];
-      const origenInfo = CAJAS_DEF.find(c => c.id === traspasoOrigen)?.nombre || traspasoOrigen;
-      const destinoInfo = CAJAS_DEF.find(c => c.id === traspasoDestino)?.nombre || traspasoDestino;
+      const origenNom = CAJAS_DEF.find(c => c.id === traspasoOrigen)?.nombre || traspasoOrigen;
+      const destinoNom = CAJAS_DEF.find(c => c.id === traspasoDestino)?.nombre || traspasoDestino;
 
-      // Egreso en caja de origen
-      const egresoTraspaso = {
-        id: 'mov-trasp-egr-' + Date.now(),
+      const egreso = {
+        id: `mov-trasp-egr-${Date.now()}`,
         fecha,
-        concepto: `[Traspaso a ${destinoInfo}] ${traspasoConcepto}`,
+        concepto: `[Traspaso a ${destinoNom}] ${traspasoConcepto}`,
         tipo: 'egreso',
+        categoria: 'Otros / No recurrente',
+        subcategoria: 'Traspaso interno',
+        monto: montoNum,
         caja: traspasoOrigen,
-        categoria: 'Otros / No recurrente',
-        subcategoria: 'Traspaso interno',
-        monto: montoNum,
         metodoPago: 'Traspaso interno',
         cargo: usuarioActivo?.nombre || 'Jesica',
-        notas: `Salida de fondos enviada a caja ${destinoInfo}`
+        cargadoPor: `${usuarioActivo?.nombre || 'Jesica'} · ${fecha}`,
+        notas: `Salida de fondos a ${destinoNom}`
       };
 
-      // Ingreso en caja de destino
-      const ingresoTraspaso = {
-        id: 'mov-trasp-ing-' + (Date.now() + 1),
+      const ingreso = {
+        id: `mov-trasp-ing-${Date.now() + 1}`,
         fecha,
-        concepto: `[Traspaso desde ${origenInfo}] ${traspasoConcepto}`,
+        concepto: `[Traspaso desde ${origenNom}] ${traspasoConcepto}`,
         tipo: 'ingreso',
-        caja: traspasoDestino,
         categoria: 'Otros / No recurrente',
         subcategoria: 'Traspaso interno',
         monto: montoNum,
+        caja: traspasoDestino,
         metodoPago: 'Traspaso interno',
         cargo: usuarioActivo?.nombre || 'Jesica',
-        notas: `Entrada de fondos recibida desde caja ${origenInfo}`
+        cargadoPor: `${usuarioActivo?.nombre || 'Jesica'} · ${fecha}`,
+        notas: `Entrada de fondos desde ${origenNom}`
       };
 
-      onAgregarMovimiento(egresoTraspaso);
-      setTimeout(() => onAgregarMovimiento(ingresoTraspaso), 100);
+      onAgregarMovimiento(egreso);
+      setTimeout(() => onAgregarMovimiento(ingreso), 80);
       setModalAbierto(false);
       return;
     }
 
-    if (!formConcepto || !formMonto || Number(formMonto) <= 0) return;
+    const numMonto = Number(formMonto);
+    if (!numMonto || numMonto <= 0 || !formConcepto.trim()) return;
 
-    const dataMov = {
+    const ahora = new Date();
+    const horaStr = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
+    const cargadoPorActual = `${usuarioActivo?.nombre || 'Jesica'} · ${ahora.toLocaleDateString('es-AR')} ${horaStr}`;
+
+    const movimientoData = {
       fecha: formFecha,
       concepto: formConcepto.trim(),
       tipo: formTipo,
       caja: formCaja,
       categoria: formCategoria,
       subcategoria: formSubcategoria,
-      monto: Number(formMonto),
-      metodoPago: formMetodo,
+      monto: numMonto,
+      metodoPago: formCaja === 'naranja' ? 'Tarjeta Naranja' : (formCaja === 'banco_nacion' ? 'Transferencia BNA' : (formCaja === 'mercado_pago' ? 'Mercado Pago' : 'Efectivo')),
       cargo: formCargo,
+      cargadoPor: modoModal === 'editar' ? (movimientoAEditar?.cargadoPor || cargadoPorActual) : cargadoPorActual,
+      eventoId: formEventoId || null,
+      origen: formTipo === 'ingreso' ? formOrigen : null,
+      proveedor: formProveedor.trim() || null,
       notas: formNotas.trim()
     };
 
     if (modoModal === 'editar' && movimientoAEditar) {
-      if (onEditarMovimiento) {
-        onEditarMovimiento({ ...movimientoAEditar, ...dataMov });
-      } else {
-        // Fallback si no está onEditarMovimiento
-        onEliminarMovimiento(movimientoAEditar.id);
-        onAgregarMovimiento({ id: movimientoAEditar.id, ...dataMov });
-      }
+      onEditarMovimiento({ ...movimientoData, id: movimientoAEditar.id });
     } else {
-      onAgregarMovimiento({
-        id: 'mov-' + Date.now(),
-        ...dataMov
-      });
+      onAgregarMovimiento({ ...movimientoData, id: `mov-${Date.now()}` });
     }
 
     setModalAbierto(false);
   };
 
-  // ---------------------------------------------------------------------------
-  // Exportar a Excel (CSV) compatible
-  // ---------------------------------------------------------------------------
-  const handleExportCSV = () => {
-    const headers = ['Fecha', 'Caja / Cuenta', 'Concepto', 'Tipo', 'Categoría', 'Subcategoría', 'Monto (ARS)', 'Método de Pago', 'Quién Cargó', 'Notas'];
-    const rows = movimientosFiltrados.map(m => {
-      const cNombre = CAJAS_DEF.find(c => c.id === getCajaMovimiento(m))?.nombre || m.caja || 'General';
-      return [
-        m.fecha,
-        `"${cNombre}"`,
-        `"${(m.concepto || '').replace(/"/g, '""')}"`,
-        m.tipo.toUpperCase(),
-        `"${m.categoria || ''}"`,
-        `"${m.subcategoria || ''}"`,
-        m.monto,
-        `"${m.metodoPago || ''}"`,
-        `"${m.cargo || ''}"`,
-        `"${(m.notas || '').replace(/"/g, '""')}"`
-      ];
-    });
+  // Guardar tramo de préstamo familiar
+  const handleGuardarTramo = async (e) => {
+    e.preventDefault();
+    const num = Number(tramoMonto);
+    if (!num || num <= 0) return;
 
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    const nombreArchivo = subTabActiva === 'general' ? 'Moments_Caja_Consolidada' : `Moments_Caja_${subTabActiva.toUpperCase()}`;
-    link.setAttribute('download', `${nombreArchivo}_${filtroMes}_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (onRegistrarTramoPrestamo) {
+      await onRegistrarTramoPrestamo({
+        fecha: tramoFecha,
+        monto: num,
+        entregadoPor: tramoEntregadoPor,
+        cajaDestino: tramoCajaDestino,
+        notas: tramoNotas
+      });
+    }
+    setModalTramoAbierto(false);
+    setTramoMonto('');
+    setTramoNotas('');
   };
 
-  // Configuración de la caja activa actualmente seleccionada
+  // ===========================================================================
+  // SUB-PESTAÑA 2: RESULTADO MENSUAL (PUNTO 6)
+  // ===========================================================================
+  const [mesResultadoActivo, setMesResultadoActivo] = useState(mesActualStr);
+  const [segundoMesResultado, setSegundoMesResultado] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    return d.toISOString().slice(0, 7);
+  });
+
+  const calcularMetricasMes = (mes) => {
+    const movsMes = (movimientos || []).filter(m => m.fecha && m.fecha.startsWith(mes));
+    
+    // Ingresos operativos por tipo de evento
+    let ingOperativos = 0;
+    const ingPorTipo = {};
+
+    // Variables: Insumos, Personal, Otros
+    let varInsumos = 0;
+    let varPersonal = 0;
+    let varOtros = 0;
+
+    // Fijos
+    let fijosTotal = 0;
+
+    // Retiros
+    let retirosTotal = 0;
+
+    // Financiamiento
+    let prestamosRecibidos = 0;
+    let prestamosDevueltos = 0;
+
+    // Conteo de items reales vs estimados
+    let totalMovs = movsMes.length;
+
+    movsMes.forEach(m => {
+      const val = Number(m.monto) || 0;
+      const esIng = m.tipo === 'ingreso';
+      const norm = normalizarCategoriaMovimiento(m.categoria, m.subcategoria);
+
+      if (esIng) {
+        if (norm.categoria === 'Financiamiento') {
+          prestamosRecibidos += val;
+        } else {
+          ingOperativos += val;
+          // Asociar a tipo de evento
+          const ev = (eventos || []).find(e => String(e.id) === String(m.eventoId));
+          const tipoKey = ev ? ev.tipo : 'Otros Eventos';
+          ingPorTipo[tipoKey] = (ingPorTipo[tipoKey] || 0) + val;
+        }
+      } else {
+        if (norm.categoria === 'Financiamiento') {
+          prestamosDevueltos += val;
+        } else if (norm.categoria === 'Retiros personales') {
+          retirosTotal += val;
+        } else if (norm.categoria === 'Variables – Insumos') {
+          varInsumos += val;
+        } else if (norm.categoria === 'Variables – Personal') {
+          varPersonal += val;
+        } else if (norm.categoria === 'Fijos') {
+          fijosTotal += val;
+        } else {
+          varOtros += val;
+        }
+      }
+    });
+
+    // Si los fijos del mes no tienen movimientos cargados, usamos el fijosReferenciaMes de configuración
+    const fijosUsados = fijosTotal > 0 ? fijosTotal : (cfg.fijosReferenciaMes || 5000000);
+    const esFijosEstimado = fijosTotal === 0;
+
+    const totalVariables = varInsumos + varPersonal + varOtros;
+    const resultadoOperativo = ingOperativos - totalVariables - fijosUsados;
+    const financiamientoNeto = prestamosRecibidos - prestamosDevueltos;
+    const cajaFinal = resultadoOperativo - retirosTotal + financiamientoNeto;
+
+    // Porcentaje de datos reales
+    const pctDatosReales = totalMovs > 0 ? (esFijosEstimado ? 75 : 100) : 0;
+
+    // Punto de equilibrio: eventos base para cubrir fijos
+    // Margen evento base = (tarifaAdulto * personasBase) - costoBase
+    const margenBase = ((cfg.tarifaAdultoVigente || 127000) * (cfg.eventoBasePersonas || 85)) - (cfg.eventoBaseCosto || 7000000);
+    const puntoEquilibrio = margenBase > 0 ? (fijosUsados / margenBase).toFixed(1) : 0;
+
+    // Eventos del mes con semáforo
+    const evMes = (eventos || []).filter(e => e.fecha && e.fecha.startsWith(mes) && e.tipo !== 'mantenimiento');
+
+    return {
+      mes,
+      ingPorTipo,
+      ingOperativos,
+      varInsumos,
+      varPersonal,
+      varOtros,
+      totalVariables,
+      fijosUsados,
+      esFijosEstimado,
+      resultadoOperativo,
+      retirosTotal,
+      prestamosRecibidos,
+      prestamosDevueltos,
+      financiamientoNeto,
+      cajaFinal,
+      pctDatosReales,
+      puntoEquilibrio,
+      eventos: evMes
+    };
+  };
+
+  const metricasMes1 = useMemo(() => calcularMetricasMes(mesResultadoActivo), [mesResultadoActivo, movimientos, eventos, cfg]);
+  const metricasMes2 = useMemo(() => calcularMetricasMes(segundoMesResultado), [segundoMesResultado, movimientos, eventos, cfg]);
+
+  // Exportar Resultado Mensual a Excel
+  const handleExportResultadoExcel = () => {
+    const wb = XLSX.utils.book_new();
+    const data = [
+      ['Moments · Salón de Eventos - Cuadro de Resultado Mensual'],
+      ['Concepto', mesResultadoActivo, segundoMesResultado],
+      ['Total Ingresos Operativos', metricasMes1.ingOperativos, metricasMes2.ingOperativos],
+      ['Variables - Insumos', metricasMes1.varInsumos, metricasMes2.varInsumos],
+      ['Variables - Personal', metricasMes1.varPersonal, metricasMes2.varPersonal],
+      ['Variables - Otros', metricasMes1.varOtros, metricasMes2.varOtros],
+      ['Total Variables', metricasMes1.totalVariables, metricasMes2.totalVariables],
+      ['Costos Fijos', metricasMes1.fijosUsados, metricasMes2.fijosUsados],
+      ['RESULTADO OPERATIVO', metricasMes1.resultadoOperativo, metricasMes2.resultadoOperativo],
+      ['Retiros de Socios', metricasMes1.retirosTotal, metricasMes2.retirosTotal],
+      ['Financiamiento Familiar (Neto)', metricasMes1.financiamientoNeto, metricasMes2.financiamientoNeto],
+      ['CAJA FINAL', metricasMes1.cajaFinal, metricasMes2.cajaFinal],
+      ['Punto de Equilibrio (eventos base)', metricasMes1.puntoEquilibrio, metricasMes2.puntoEquilibrio]
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, 'Resultado');
+    XLSX.writeFile(wb, `Moments_Resultado_${mesResultadoActivo}_${segundoMesResultado}.xlsx`);
+  };
+
+  // ===========================================================================
+  // SUB-PESTAÑA 3: CONTROL DE COSTOS FIJOS (PUNTO 5)
+  // ===========================================================================
+  const estadoCostosFijos = useMemo(() => {
+    const plantilla = cfg.plantillaCostosFijos || [];
+    const diaHoy = new Date().getDate();
+    const movsFijosMes = (movimientos || []).filter(m => {
+      if (!m.fecha || !m.fecha.startsWith(filtroMes === 'todos' ? mesActualStr : filtroMes)) return false;
+      if (m.tipo !== 'egreso') return false;
+      const norm = normalizarCategoriaMovimiento(m.categoria, m.subcategoria);
+      return norm.categoria === 'Fijos';
+    });
+
+    return plantilla.map(fijo => {
+      // Buscar si hay pago en el mes
+      const pago = movsFijosMes.find(m => {
+        const norm = normalizarCategoriaMovimiento(m.categoria, m.subcategoria);
+        return norm.subcategoria.toLowerCase() === fijo.subcategoria.toLowerCase() ||
+               (m.concepto && m.concepto.toLowerCase().includes(fijo.subcategoria.toLowerCase()));
+      });
+
+      const pagado = Boolean(pago);
+      const diaVence = Number(fijo.diaVencimiento) || 10;
+      const vencido = !pagado && diaHoy > diaVence;
+      const estado = pagado ? 'Pagado' : (vencido ? 'Vencido' : 'Pendiente');
+      const montoReal = pago ? Number(pago.monto) : null;
+      const montoMostrar = montoReal !== null ? montoReal : (Number(fijo.montoEstimado) || 0);
+
+      return {
+        ...fijo,
+        pagado,
+        vencido,
+        estado,
+        montoReal,
+        montoMostrar,
+        esEstimado: montoReal === null,
+        movimientoId: pago ? pago.id : null
+      };
+    });
+  }, [cfg, movimientos, filtroMes, mesActualStr]);
+
+  // ===========================================================================
+  // SUB-PESTAÑA 4: DIRECTORIO DE PROVEEDORES (PUNTO 10)
+  // ===========================================================================
+  const [modalProveedor, setModalProveedor] = useState(null);
+  const [provTel, setProvTel] = useState('');
+  const [provNotas, setProvNotas] = useState('');
+
+  const listaProveedores = useMemo(() => {
+    const map = {};
+    const anioActual = new Date().getFullYear().toString();
+
+    (movimientos || []).forEach(m => {
+      if (m.tipo !== 'egreso') return;
+      const provNom = m.proveedor ? String(m.proveedor).trim() : null;
+      if (!provNom) return;
+
+      if (!map[provNom]) {
+        map[provNom] = {
+          nombre: provNom,
+          categoria: m.subcategoria || m.categoria || 'Insumos',
+          ultimoPrecio: Number(m.monto) || 0,
+          ultimaFecha: m.fecha || '',
+          totalAnio: 0,
+          cantidadCompras: 0
+        };
+      }
+
+      const val = Number(m.monto) || 0;
+      if (m.fecha && (!map[provNom].ultimaFecha || m.fecha >= map[provNom].ultimaFecha)) {
+        map[provNom].ultimaFecha = m.fecha;
+        map[provNom].ultimoPrecio = val;
+        map[provNom].categoria = m.subcategoria || m.categoria;
+      }
+
+      if (m.fecha && m.fecha.startsWith(anioActual)) {
+        map[provNom].totalAnio += val;
+      }
+      map[provNom].cantidadCompras += 1;
+    });
+
+    // Enriquecer con proveedoresDatos
+    return Object.values(map).map(p => {
+      const extra = (proveedoresDatos || []).find(pd => pd.id === p.nombre || pd.nombre === p.nombre);
+      return {
+        ...p,
+        telefono: extra?.telefono || '',
+        notas: extra?.notas || ''
+      };
+    }).sort((a, b) => b.totalAnio - a.totalAnio);
+  }, [movimientos, proveedoresDatos]);
+
+  const handleGuardarDatosProveedor = async (e) => {
+    e.preventDefault();
+    if (!modalProveedor || !onGuardarProveedorDatos) return;
+    await onGuardarProveedorDatos({
+      id: modalProveedor.nombre,
+      nombre: modalProveedor.nombre,
+      telefono: provTel.trim(),
+      notas: provNotas.trim()
+    });
+    setModalProveedor(null);
+  };
+
+  // ===========================================================================
+  // SUB-PESTAÑA 5: IMPORTAR EXCEL CON PLANTILLA OFICIAL (PUNTO 8)
+  // ===========================================================================
+  const [archivoImportar, setArchivoImportar] = useState(null);
+  const [filasPreview, setFilasPreview] = useState([]);
+  const [importando, setImportando] = useState(false);
+  const [resumenImportacion, setResumenImportacion] = useState(null);
+  const [modoManualExcel, setModoManualExcel] = useState(false);
+  const [columnasExcel, setColumnasExcel] = useState([]);
+  const [mapeoCols, setMapeoCols] = useState({
+    fecha: '',
+    concepto: '',
+    monto: '',
+    tipo: '',
+    caja: '',
+    categoria: ''
+  });
+
+  // Descarga de la plantilla oficial con 2 hojas: Movimientos e Instrucciones
+  const handleDescargarPlantilla = () => {
+    const wb = XLSX.utils.book_new();
+
+    // Hoja 1: Movimientos
+    const encabezados = [
+      'Fecha',
+      'Tipo',
+      'Categoría',
+      'Subcategoría',
+      'Concepto',
+      'Monto',
+      'Caja',
+      'Fecha del evento',
+      'Origen',
+      'Proveedor',
+      'Notas'
+    ];
+    const ejemplos = [
+      [
+        new Date().toLocaleDateString('es-AR'),
+        'Egreso',
+        'Variables – Insumos',
+        'Carnes',
+        'Compra de lomos y asado para fiesta',
+        450000,
+        'Efectivo',
+        '',
+        '',
+        'Carnicería Don Juan',
+        'Factura B 0041'
+      ],
+      [
+        new Date().toLocaleDateString('es-AR'),
+        'Ingreso',
+        'Variables – Otros',
+        'Proveedores de evento',
+        'Seña Boda Rossi',
+        1500000,
+        'Banco Nación',
+        '2026-11-20',
+        'Seña',
+        '',
+        'Transferencia BNA confirmada'
+      ]
+    ];
+    const wsMov = XLSX.utils.aoa_to_sheet([encabezados, ...ejemplos]);
+    XLSX.utils.book_append_sheet(wb, wsMov, 'Movimientos');
+
+    // Hoja 2: Instrucciones
+    const instrucciones = [
+      ['INSTRUCCIONES PARA LA CARGA DE MOVIMIENTOS EN MOMENT\'S'],
+      [''],
+      ['Columna', 'Regla / Valor Permitido', 'Detalle'],
+      ['Fecha', 'dd/mm/aaaa', 'Fecha en la que ocurrió el pago o cobro.'],
+      ['Tipo', 'Ingreso o Egreso', 'Escribir exactamente "Ingreso" o "Egreso".'],
+      ['Categoría', 'Variables – Insumos | Variables – Personal | Variables – Otros | Fijos | Retiros personales | Financiamiento | Otros / No recurrente', 'Categoría oficial.'],
+      ['Subcategoría', 'Ver lista completa debajo', 'Debe corresponder a la categoría seleccionada.'],
+      ['Concepto', 'Texto descriptivo', 'Detalle claro del movimiento.'],
+      ['Monto', 'Número positivo', 'Sin signo $ ni separador de miles. Ej: 450000'],
+      ['Caja', 'Naranja, Banco Nación, Mercado Pago o Efectivo', 'Cuenta en la que ingresa o egresa el dinero.'],
+      ['Fecha del evento', 'aaaa-mm-dd o dd/mm/aaaa (Opcional)', 'Si se completa, se vincula automáticamente al evento de esa fecha.'],
+      ['Origen', 'Seña, Cuota, Saldo final, Otro', 'Solo para ingresos. En egresos dejar vacío.'],
+      ['Proveedor', 'Texto (Opcional)', 'Nombre del proveedor o persona destinataria.'],
+      ['Notas', 'Texto (Opcional)', 'Comprobante, nro de transferencia, etc.'],
+      [''],
+      ['LISTADO DE CATEGORÍAS Y SUBCATEGORÍAS VÁLIDAS:'],
+      ['']
+    ];
+
+    Object.entries(CATEGORIAS_CAJA).forEach(([cat, subs]) => {
+      instrucciones.push([cat, subs.join(' · ')]);
+    });
+
+    const wsInst = XLSX.utils.aoa_to_sheet(instrucciones);
+    XLSX.utils.book_append_sheet(wb, wsInst, 'Instrucciones');
+
+    XLSX.writeFile(wb, 'Plantilla_Moments_Movimientos.xlsx');
+  };
+
+  // Leer y validar archivo Excel seleccionado
+  const handleArchivoSeleccionado = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setArchivoImportar(file);
+    setResumenImportacion(null);
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+
+        if (json.length < 2) {
+          alert('El archivo no contiene filas de datos.');
+          return;
+        }
+
+        const headers = json[0].map(h => String(h || '').trim());
+        setColumnasExcel(headers);
+
+        // Detectar si tiene el formato estándar oficial
+        const headersOficiales = [
+          'Fecha', 'Tipo', 'Categoría', 'Subcategoría', 'Concepto', 
+          'Monto', 'Caja', 'Fecha del evento', 'Origen', 'Proveedor', 'Notas'
+        ];
+        const esOficial = headers.length >= 7 && headers.slice(0, 7).every((h, i) => h.toLowerCase() === headersOficiales[i].toLowerCase());
+
+        if (esOficial) {
+          setModoManualExcel(false);
+          validarFilasOficiales(json.slice(1));
+        } else {
+          setModoManualExcel(true);
+        }
+      } catch (err) {
+        alert('Error al leer el archivo Excel: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const validarFilasOficiales = (filas) => {
+    const preview = [];
+    const duplicadosExistentes = (movimientos || []);
+
+    filas.forEach((f, idx) => {
+      if (!f || f.length === 0 || f.every(c => !c)) return;
+
+      const [fFecha, fTipo, fCat, fSubcat, fConcepto, fMonto, fCaja, fFechaEv, fOrigen, fProv, fNotas] = f;
+      const errores = [];
+
+      // Validar monto
+      const montoLimpio = String(fMonto || '').replace(/[^0-9.-]/g, '');
+      const montoNum = Number(montoLimpio);
+      if (isNaN(montoNum) || montoNum <= 0) {
+        errores.push('Monto vacío o inválido');
+      }
+
+      // Validar tipo
+      const tipoNorm = String(fTipo || '').toLowerCase();
+      if (!tipoNorm.includes('ingreso') && !tipoNorm.includes('egreso')) {
+        errores.push('Tipo debe ser Ingreso o Egreso');
+      }
+
+      // Validar caja
+      const cajaNorm = getCajaMovimiento({ metodoPago: fCaja, concepto: fConcepto, caja: fCaja });
+
+      // Detectar posible duplicado
+      const conceptoStr = String(fConcepto || '').trim().toLowerCase();
+      const posibleDuplicado = duplicadosExistentes.some(m => {
+        return m.monto === montoNum && 
+               String(m.concepto || '').toLowerCase().includes(conceptoStr.slice(0, 10)) &&
+               conceptoStr.length > 3;
+      });
+
+      let estado = 'ok';
+      if (errores.length > 0) estado = 'error';
+      else if (posibleDuplicado) estado = 'duplicado';
+
+      preview.push({
+        numFila: idx + 2,
+        fecha: fFecha || new Date().toISOString().slice(0, 10),
+        tipo: tipoNorm.includes('ingreso') ? 'ingreso' : 'egreso',
+        categoria: fCat || 'Variables – Otros',
+        subcategoria: fSubcat || 'Proveedores de evento',
+        concepto: fConcepto || 'Movimiento importado',
+        monto: montoNum || 0,
+        caja: cajaNorm,
+        eventoId: null,
+        fechaEvento: fFechaEv || null,
+        origen: fOrigen || null,
+        proveedor: fProv || null,
+        notas: fNotas || '',
+        estado,
+        errores,
+        ignorarDuplicado: false
+      });
+    });
+
+    setFilasPreview(preview);
+  };
+
+  const handleConfirmarImportacion = () => {
+    const filasAImportar = filasPreview.filter(f => f.estado === 'ok' || (f.estado === 'duplicado' && f.ignorarDuplicado));
+    if (filasAImportar.length === 0) {
+      alert('No hay filas válidas para importar.');
+      return;
+    }
+
+    setImportando(true);
+    const ahoraStr = new Date().toLocaleDateString('es-AR');
+    let cant = 0;
+
+    filasAImportar.forEach((f, i) => {
+      // Buscar si coincide con la fecha de algún evento
+      let evId = null;
+      if (f.fechaEvento) {
+        const ev = (eventos || []).find(e => e.fecha === f.fechaEvento);
+        if (ev) evId = ev.id;
+      }
+
+      const nuevo = {
+        id: `mov-imp-${Date.now()}-${i}`,
+        fecha: f.fecha,
+        concepto: f.concepto,
+        tipo: f.tipo,
+        categoria: f.categoria,
+        subcategoria: f.subcategoria,
+        monto: f.monto,
+        caja: f.caja,
+        metodoPago: f.caja === 'naranja' ? 'Tarjeta Naranja' : (f.caja === 'banco_nacion' ? 'Transferencia BNA' : (f.caja === 'mercado_pago' ? 'Mercado Pago' : 'Efectivo')),
+        cargo: usuarioActivo?.nombre || 'Jesica',
+        cargadoPor: `Importación Excel – ${usuarioActivo?.nombre || 'Jesica'} – ${ahoraStr}`,
+        eventoId: evId,
+        origen: f.tipo === 'ingreso' ? (f.origen || 'Otro') : null,
+        proveedor: f.proveedor,
+        notas: f.notas
+      };
+
+      onAgregarMovimiento(nuevo);
+      cant++;
+    });
+
+    setResumenImportacion({
+      importados: cant,
+      errores: filasPreview.filter(f => f.estado === 'error').length,
+      duplicadosOmitidos: filasPreview.filter(f => f.estado === 'duplicado' && !f.ignorarDuplicado).length
+    });
+
+    setImportando(false);
+    setFilasPreview([]);
+    setArchivoImportar(null);
+  };
+
+  // Exportar Excel tradicional
+  const handleExportCSV = () => {
+    const headers = ['Fecha', 'Caja', 'Concepto', 'Tipo', 'Categoría', 'Subcategoría', 'Monto', 'Método', 'Cargado Por', 'Notas'];
+    const rows = movimientosFiltrados.map(m => [
+      m.fecha,
+      CAJAS_DEF.find(c => c.id === getCajaMovimiento(m))?.nombre || m.caja,
+      m.concepto || '',
+      m.tipo.toUpperCase(),
+      m.categoria || '',
+      m.subcategoria || '',
+      m.monto || 0,
+      m.metodoPago || '',
+      m.cargadoPor || m.cargo || '',
+      m.notas || ''
+    ]);
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    XLSX.utils.book_append_sheet(wb, ws, 'Movimientos');
+    XLSX.writeFile(wb, `Moments_Movimientos_${filtroMes}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
   const cajaActivaConfig = CAJAS_DEF.find(c => c.id === subTabActiva);
-  const metricasActivas = metricasPorCaja[subTabActiva] || { ingresos: 0, egresos: 0, saldo: 0, retiros: 0, cantidad: 0 };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6 animate-fadeIn font-['Montserrat']">
       
-      {/* -------------------------------------------------------------------
-          1. ENCABEZADO Y SELECTOR DE PESTAÑAS POR CAJA (ESTRUCTURA DE LA DUEÑA)
-          Naranja -> Banco Nación -> Mercado Pago -> Efectivo -> General Consolidado
-         ------------------------------------------------------------------- */}
-      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 shadow-soft border border-[#E3DCCE]">
+      {/* =====================================================================
+          1. SIMULADOR DE COBERTURA Y PRÉSTAMO FAMILIAR POR TRAMOS (PUNTO 12)
+          Arriba de todo en la pestaña Caja, altamente visual para Gerencia y Leandro
+         ===================================================================== */}
+      <div className="bg-[#1E251B] text-[#F6F3E9] rounded-3xl p-5 sm:p-7 shadow-2xl border border-[#C6A96A]/50 relative overflow-hidden">
         
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#E3DCCE]">
-          <div>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <span className="w-8 h-8 rounded-xl bg-[#2F3A2A] text-[#C6A96A] border border-[#C6A96A]/40 flex items-center justify-center font-bold">
-                <Wallet className="w-4 h-4 text-[#C6A96A]" />
+        {/* Glow dorado decorativo */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[#C6A96A]/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+
+        {/* ALERTA: PEDIR PRÓXIMO TRAMO (aparece arriba en rojo si la caja no cubre el colchón) */}
+        {alertaTramoActiva && (
+          <div className="mb-5 p-4 rounded-2xl bg-rose-950/80 border-2 border-rose-500 text-rose-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg animate-pulse">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-rose-600 flex items-center justify-center font-bold text-white shrink-0">
+                <AlertTriangle className="w-5 h-5" />
               </span>
-              <h1 className="text-2xl font-bold text-[#2F3A2A] font-serif tracking-tight">
-                Caja y Gestión Financiera
-              </h1>
-              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#2F3A2A]/10 text-[#2F3A2A] border border-[#5A6B4A]/30 font-['Montserrat']">
-                Acceso Gerencia (Jesica & Leandro)
+              <div>
+                <strong className="block text-sm font-bold text-white">
+                  🚨 Alerta: Solicitar Próximo Tramo de Préstamo Familiar
+                </strong>
+                <span className="text-xs text-rose-200">
+                  La caja actual para operar no cubre el colchón de seguridad de {colchon} evento(s) ({formatARS(costoColchon)}).
+                  {proximoEvento && ` Próximo evento: ${proximoEvento.titulo} (${proximoEvento.fecha}).`}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+              <span className="text-xs font-bold bg-rose-900/90 px-3 py-1.5 rounded-xl border border-rose-400">
+                Sugerido: <strong>{formatARS(montoTramoSugerido)}</strong>
+              </span>
+              <button
+                onClick={() => {
+                  setTramoMonto(String(montoTramoSugerido));
+                  setModalTramoAbierto(true);
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-white text-rose-950 font-bold text-xs hover:bg-rose-100 transition-all cursor-pointer shadow-sm"
+              >
+                + Cargar Tramo
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Encabezado del Simulador */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-[#C6A96A]/30">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wider uppercase bg-[#C6A96A]/20 text-[#C6A96A] border border-[#C6A96A]/40">
+                <DollarSign className="w-3.5 h-3.5" /> Simulador Financiero
+              </span>
+              <span className="text-xs text-[#E3DCCE]/70 font-semibold">
+                Planificación por Tramos de Préstamo Familiar
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1 font-['Montserrat']">
-              Administración por cajas separadas: cada movimiento ingresa en su propia cuenta y se unifica en el general consolidado.
-            </p>
+            <h2 className="text-xl sm:text-2xl font-bold font-serif text-[#F6F3E9] mt-1 tracking-tight">
+              Cobertura de Próximos Eventos & Saldo de Deuda
+            </h2>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-3">
             <button
-              onClick={abrirModalTraspaso}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 shadow-xs transition-all active:scale-95 cursor-pointer"
-              title="Mover dinero de una caja a otra (ej: de Efectivo a Banco Nación)"
+              onClick={() => setModalTramoAbierto(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#C6A96A] hover:bg-[#d8bb7a] text-[#1E251B] font-bold text-xs shadow-md transition-all cursor-pointer"
             >
-              <ArrowLeftRight className="w-3.5 h-3.5 text-slate-600" />
-              <span>Traspaso entre Cajas</span>
-            </button>
-
-            <button
-              onClick={handleExportCSV}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-2xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs transition-all cursor-pointer"
-              title="Descargar datos en formato Excel (CSV)"
-            >
-              <Download className="w-3.5 h-3.5 text-slate-500" />
-              <span>Exportar Excel</span>
-            </button>
-
-            <button
-              onClick={() => abrirModalNuevo(subTabActiva !== 'general' ? subTabActiva : 'naranja')}
-              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-black rounded-2xl text-white shadow-md transition-all active:scale-95 cursor-pointer ${
-                cajaActivaConfig ? cajaActivaConfig.btnPrimary : 'bg-amber-600 hover:bg-amber-700'
-              }`}
-            >
-              <Plus className="w-4 h-4" />
-              <span>
-                {subTabActiva === 'general' ? '+ Nuevo Movimiento' : `+ Cargar en ${cajaActivaConfig?.nombre}`}
-              </span>
+              <Plus className="w-4 h-4 text-[#1E251B]" />
+              <span>+ Registrar Tramo Recibido</span>
             </button>
           </div>
         </div>
 
-        {/* BARRA DE PESTAÑAS: LAS 4 CAJAS + GENERAL CONSOLIDADO */}
-        <div className="mt-4 pt-1">
-          <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2">
-            Seleccioná la Caja a revisar o cargar:
-          </div>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-            {CAJAS_DEF.map((caja) => {
-              const Icono = caja.icono;
-              const isActive = subTabActiva === caja.id;
-              const saldo = metricasPorCaja[caja.id]?.saldo || 0;
-
-              return (
+        {/* Controles del Simulador: Eventos y Costo Promedio */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 py-4 text-xs">
+          {/* Cantidad de Eventos */}
+          <div className="p-3 rounded-2xl bg-black/25 border border-white/10">
+            <span className="text-[11px] font-bold text-[#E3DCCE]/80 block mb-1">
+              Cantidad de Eventos a Planificar
+            </span>
+            <div className="flex items-center gap-1.5 mb-2">
+              {[1, 3, 5, 10].map(n => (
                 <button
-                  key={caja.id}
-                  onClick={() => setSubTabActiva(caja.id)}
-                  className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex flex-col justify-between ${
-                    isActive 
-                      ? `${caja.tabActive} border-transparent ring-2 ring-offset-1 ring-slate-400/30 scale-[1.01]` 
-                      : 'bg-slate-50/80 hover:bg-slate-100 text-slate-700 border-slate-200/80'
+                  key={n}
+                  onClick={() => setSimCantEventos(n)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                    simCantEventos === n 
+                      ? 'bg-[#C6A96A] text-[#1E251B]' 
+                      : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-1 mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${isActive ? 'bg-white/20 text-white' : 'bg-white text-slate-700 shadow-xs'}`}>
-                        <Icono className="w-3.5 h-3.5" />
-                      </div>
-                      <span className="font-black text-xs tracking-tight">{caja.nombre}</span>
-                    </div>
-                    <span className={`w-2 h-2 rounded-full ${caja.dot}`} />
-                  </div>
-                  
-                  <div className="mt-1">
-                    <div className="text-[10px] opacity-80 font-medium">Saldo disponible:</div>
-                    <div className={`text-xs font-black tracking-tight ${isActive ? 'text-white' : saldo >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>
-                      {formatARS(saldo)}
-                    </div>
-                  </div>
+                  {n}
                 </button>
-              );
-            })}
+              ))}
+              <button
+                onClick={() => setSimCantEventos(Math.max(1, eventosFuturos.length))}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  simCantEventos === eventosFuturos.length 
+                    ? 'bg-[#C6A96A] text-[#1E251B]' 
+                    : 'bg-white/10 text-white hover:bg-white/20'
+                }`}
+                title="Todos los eventos futuros cargados en calendario"
+              >
+                Todos ({eventosFuturos.length})
+              </button>
+            </div>
+            <input
+              type="number"
+              min="1"
+              value={simCantEventos}
+              onChange={(e) => setSimCantEventos(Math.max(1, Number(e.target.value)))}
+              className="w-full px-2.5 py-1.5 text-xs font-bold text-white bg-black/40 rounded-xl border border-white/20"
+            />
+          </div>
 
-            {/* Pestaña 5: General Consolidado */}
-            <button
-              onClick={() => setSubTabActiva('general')}
-              className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex flex-col justify-between ${
-                subTabActiva === 'general'
-                  ? 'bg-[#2F3A2A] text-[#F6F3E9] shadow-md shadow-[#2F3A2A]/30 border-[#C6A96A]/60 ring-2 ring-offset-1 ring-[#C6A96A]/40 scale-[1.01]'
-                  : 'bg-slate-50/80 hover:bg-slate-100 text-slate-700 border-slate-200/80'
-              }`}
-            >
-              <div className="flex items-center justify-between gap-1 mb-1.5">
-                <div className="flex items-center gap-2">
-                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${subTabActiva === 'general' ? 'bg-[#C6A96A]/20 text-[#C6A96A]' : 'bg-white text-slate-700 shadow-xs'}`}>
-                    <Layers className="w-3.5 h-3.5" />
-                  </div>
-                  <span className="font-bold text-xs tracking-tight">General</span>
-                </div>
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[#C6A96A]/20 text-[#C6A96A]">Total</span>
-              </div>
+          {/* Costo Promedio por Evento */}
+          <div className="p-3 rounded-2xl bg-black/25 border border-white/10">
+            <span className="text-[11px] font-bold text-[#E3DCCE]/80 block mb-1">
+              Costo Promedio / Evento
+            </span>
+            <input
+              type="number"
+              step="500000"
+              value={simCostoPromedio}
+              onChange={(e) => setSimCostoPromedio(Number(e.target.value))}
+              className="w-full px-2.5 py-1.5 text-xs font-bold text-[#C6A96A] bg-black/40 rounded-xl border border-white/20 mb-1"
+            />
+            <span className="text-[10px] text-slate-400">
+              {formatARS(simCostoPromedio)} (promedio de planificación)
+            </span>
+          </div>
 
-              <div className="mt-1">
-                <div className="text-[10px] opacity-80 font-medium">Total en Salón:</div>
-                <div className={`text-xs font-bold tracking-tight ${subTabActiva === 'general' ? 'text-[#C6A96A]' : 'text-slate-900'}`}>
-                  {formatARS(metricasPorCaja.general.saldo)}
-                </div>
-              </div>
-            </button>
+          {/* Caja Actual Disponible */}
+          <div className="p-3 rounded-2xl bg-black/25 border border-white/10">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-bold text-[#E3DCCE]/80">Caja Actual Disponible</span>
+              {simCajaManualOverride !== null && (
+                <button
+                  onClick={() => setSimCajaManualOverride(null)}
+                  className="text-[10px] text-[#C6A96A] hover:underline"
+                >
+                  Volver a real
+                </button>
+              )}
+            </div>
+            <input
+              type="number"
+              value={simCajaActual}
+              onChange={(e) => setSimCajaManualOverride(Number(e.target.value))}
+              className="w-full px-2.5 py-1.5 text-xs font-bold text-emerald-400 bg-black/40 rounded-xl border border-white/20 mb-1"
+            />
+            <span className="text-[10px] text-slate-400">
+              Real en 4 cajas: {formatARS(saldoRealSinPrestamos)}
+            </span>
+          </div>
+
+          {/* Ingresos Inesperados */}
+          <div className="p-3 rounded-2xl bg-black/25 border border-white/10">
+            <span className="text-[11px] font-bold text-[#E3DCCE]/80 block mb-1">
+              Ingresos Inesperados
+            </span>
+            <input
+              type="number"
+              value={simIngresosInesperados}
+              onChange={(e) => setSimIngresosInesperados(Number(e.target.value))}
+              className="w-full px-2.5 py-1.5 text-xs font-bold text-white bg-black/40 rounded-xl border border-white/20 mb-1"
+            />
+            <span className="text-[10px] text-slate-400">
+              Cobros extraordinarios fuera de seña
+            </span>
           </div>
         </div>
 
-      </div>
-
-      {/* -------------------------------------------------------------------
-          2. TARJETAS DE TOTALES SEGÚN LA PESTAÑA ACTIVA
-         ------------------------------------------------------------------- */}
-      {subTabActiva !== 'general' && cajaActivaConfig ? (
-        /* Vista de Caja Individual (Naranja, Banco Nación, Mercado Pago o Efectivo) */
-        <div className="bg-white rounded-3xl p-5 shadow-soft border border-moments-border space-y-4">
+        {/* 4 Grandes Números Visuales */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
           
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-2.5">
-              <span className={`w-3 h-3 rounded-full ${cajaActivaConfig.dot}`} />
-              <div>
-                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                  <span>Caja {cajaActivaConfig.nombre}</span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${cajaActivaConfig.badge}`}>
-                    {cajaActivaConfig.subtitulo}
-                  </span>
-                </h3>
-              </div>
+          {/* 1. COSTO DE LOS EVENTOS (NÚMERO GRANDE EN ROJO) */}
+          <div className="p-4 rounded-2xl bg-rose-950/40 border border-rose-500/40">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-rose-300 block mb-1">
+              Costo de los próximos {simCantEventos} eventos
+            </span>
+            <div className="text-2xl sm:text-3xl font-extrabold text-rose-400 font-serif">
+              {formatARS(simCostoEventos)}
             </div>
-
-            {/* Selector de Mes */}
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-slate-400" />
-              <span className="text-xs font-bold text-slate-500">Período:</span>
-              <select
-                value={filtroMes}
-                onChange={(e) => setFiltroMes(e.target.value)}
-                className="bg-slate-50 border border-slate-200 text-slate-800 font-bold text-xs rounded-xl px-2.5 py-1 focus:outline-none cursor-pointer"
-              >
-                <option value="2026-10">Octubre 2026 (Actual)</option>
-                <option value="2026-09">Septiembre 2026</option>
-                <option value="2026-08">Agosto 2026</option>
-                <option value="todos">Todo el Histórico</option>
-              </select>
+            <div className="text-[10px] text-rose-300/80 mt-1">
+              {simCantEventos} × {formatARS(simCostoPromedio)}
             </div>
           </div>
 
-          {/* Tarjetas de Métricas de la Caja Seleccionada */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          {/* 2. DISPONIBLE (NÚMERO GRANDE EN VERDE BOSQUE) */}
+          <div className="p-4 rounded-2xl bg-[#2F3A2A]/80 border border-[#5A6B4A]/50">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#A5B29B] block mb-1">
+              Dinero Disponible
+            </span>
+            <div className="text-2xl sm:text-3xl font-extrabold text-[#E8EDE3] font-serif">
+              {formatARS(simDisponible)}
+            </div>
+            <div className="text-[10px] text-[#A5B29B] mt-1">
+              Caja actual + ingresos inesperados
+            </div>
+          </div>
+
+          {/* 3. PRÉSTAMO NECESARIO Y FALTA PEDIR */}
+          <div className="p-4 rounded-2xl bg-black/40 border border-[#C6A96A]/40">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#C6A96A] block mb-1">
+              Préstamo Necesario
+            </span>
+            <div className="text-2xl sm:text-3xl font-extrabold text-[#C6A96A] font-serif">
+              {formatARS(simPrestamoNecesario)}
+            </div>
             
-            {/* Saldo de esta Caja */}
-            <div className={`p-4 rounded-2xl border ${cajaActivaConfig.accentBg} ${cajaActivaConfig.accentBorder}`}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-extrabold text-slate-700">Saldo Actual en {cajaActivaConfig.nombre}</span>
-                <div className="w-7 h-7 rounded-lg bg-white/80 flex items-center justify-center text-slate-700 shadow-xs">
-                  <Wallet className="w-4 h-4" />
-                </div>
+            {/* Barra de avance: Recibido vs Falta Pedir */}
+            <div className="mt-2 space-y-1">
+              <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-[#C6A96A] rounded-full transition-all"
+                  style={{ width: `${simPrestamoNecesario > 0 ? Math.min(100, Math.round((simPrestamoRecibido / simPrestamoNecesario) * 100)) : 100}%` }}
+                />
               </div>
-              <div className={`text-2xl font-black ${metricasActivas.saldo >= 0 ? 'text-slate-950' : 'text-rose-600'}`}>
-                {formatARS(metricasActivas.saldo)}
+              <div className="flex justify-between text-[10px] text-slate-300">
+                <span>Recibido: {formatARS(simPrestamoRecibido)}</span>
+                <span className="font-bold text-rose-400">Falta: {formatARS(simFaltaPedir)}</span>
               </div>
-              <p className="text-[11px] text-slate-500 mt-1">Disponible en esta cuenta</p>
             </div>
+          </div>
 
-            {/* Ingresos en esta Caja */}
-            <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-extrabold text-emerald-800">Total Ingresos ({cajaActivaConfig.nombre})</span>
-                <div className="w-7 h-7 rounded-lg bg-emerald-200/60 flex items-center justify-center text-emerald-800">
-                  <ArrowUpRight className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="text-2xl font-black text-emerald-950">
-                {formatARS(metricasActivas.ingresos)}
-              </div>
-              <p className="text-[11px] text-emerald-700 mt-1">Cobros y señas cobradas por esta caja</p>
+          {/* 4. EVENTOS CUBIERTOS & DEUDA */}
+          <div className="p-4 rounded-2xl bg-black/40 border border-white/10">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300 block mb-1">
+              Cobertura Operativa
+            </span>
+            <div className="text-xl sm:text-2xl font-extrabold text-white font-serif">
+              {simEventosCubiertos} de {simCantEventos} eventos
             </div>
-
-            {/* Egresos de esta Caja */}
-            <div className="p-4 rounded-2xl bg-rose-50/80 border border-rose-200">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-extrabold text-rose-800">Total Gastos ({cajaActivaConfig.nombre})</span>
-                <div className="w-7 h-7 rounded-lg bg-rose-200/60 flex items-center justify-center text-rose-800">
-                  <ArrowDownRight className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="text-2xl font-black text-rose-950">
-                {formatARS(metricasActivas.egresos)}
-              </div>
-              <p className="text-[11px] text-rose-700 mt-1">Pagos y salidas efectuadas desde esta caja</p>
+            <div className="text-[11px] text-[#C6A96A] font-semibold mt-1">
+              Caja para operar: {formatARS(simCajaParaOperar)}
             </div>
-
+            <div className="mt-2 pt-2 border-t border-white/10 flex justify-between text-[10px] text-slate-400">
+              <span>Saldo Adeudado a Familia:</span>
+              <strong className="text-amber-400">{formatARS(simSaldoAdeudado)}</strong>
+            </div>
           </div>
 
         </div>
-      ) : (
-        /* Vista General Consolidada: Comparativa de las 4 Cajas + Totales Generales */
-        <div className="bg-white rounded-3xl p-5 shadow-soft border border-moments-border space-y-5">
-          
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
-            <div>
-              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                <Layers className="w-5 h-5 text-amber-700" />
-                <span>Resumen General Consolidado</span>
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Consolidación automática de las 4 cuentas: Naranja, Banco Nación, Mercado Pago y Efectivo.
-              </p>
+
+        {/* LÍNEA DE TIEMPO SIMPLE DE PRÓXIMOS EVENTOS */}
+        {eventosFuturos.length > 0 && (
+          <div className="mt-5 pt-4 border-t border-white/10">
+            <div className="text-xs font-bold text-[#E3DCCE]/80 mb-2 flex items-center justify-between">
+              <span>Cronograma de Próximos Eventos y Punto de Cobertura:</span>
+              <span className="text-[11px] text-[#C6A96A]">
+                Con la plata actual se llega hasta el evento #{simEventosCubiertos || 0}
+              </span>
             </div>
 
-            {/* Selector de Mes */}
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-slate-400" />
-              <span className="text-xs font-bold text-slate-500">Período:</span>
-              <select
-                value={filtroMes}
-                onChange={(e) => setFiltroMes(e.target.value)}
-                className="bg-amber-50 border border-amber-200 text-amber-950 font-bold text-xs rounded-xl px-2.5 py-1 focus:outline-none cursor-pointer"
-              >
-                <option value="2026-10">Octubre 2026 (Actual)</option>
-                <option value="2026-09">Septiembre 2026</option>
-                <option value="2026-08">Agosto 2026</option>
-                <option value="todos">Todo el Histórico</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Grilla Comparativa de las 4 Cajas en paralelo */}
-          <div>
-            <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2.5">
-              Disponibilidad de fondos en cada una de las 4 Cajas:
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {CAJAS_DEF.map(c => {
-                const s = metricasPorCaja[c.id]?.saldo || 0;
-                const tot = metricasPorCaja.general.saldo || 1;
-                const pct = tot > 0 ? Math.max(0, Math.round((s / tot) * 100)) : 0;
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+              {eventosFuturos.slice(0, 10).map((ev, i) => {
+                const cubierto = i < simEventosCubiertos;
+                const esPuntoCorte = i === simEventosCubiertos;
 
                 return (
                   <div 
-                    key={c.id} 
-                    className={`p-3.5 rounded-2xl border ${c.accentBg} ${c.accentBorder} flex flex-col justify-between`}
+                    key={ev.id}
+                    className={`p-2.5 rounded-xl border shrink-0 text-xs transition-all min-w-[150px] ${
+                      cubierto 
+                        ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-200' 
+                        : esPuntoCorte 
+                        ? 'bg-rose-950/60 border-rose-500 text-rose-200 ring-2 ring-rose-500/40' 
+                        : 'bg-black/30 border-white/10 text-slate-400'
+                    }`}
                   >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="font-extrabold text-xs text-slate-800">{c.nombre}</span>
-                      <button
-                        onClick={() => setSubTabActiva(c.id)}
-                        className="text-[10px] font-bold text-slate-500 hover:text-slate-900 hover:underline cursor-pointer"
-                      >
-                        Abrir caja →
-                      </button>
+                    <div className="flex items-center justify-between text-[10px] font-bold mb-1">
+                      <span>#{i + 1} · {ev.fecha}</span>
+                      <span>{cubierto ? '🟢 Cubierto' : '🔴 Requiere tramo'}</span>
                     </div>
-                    <div className="text-lg font-black text-slate-900">
-                      {formatARS(s)}
-                    </div>
-                    <div className="mt-2 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[10px] font-bold text-slate-500">
-                      <span>{pct}% de la liquidez</span>
-                      <span className="text-emerald-700 font-extrabold">+{formatARS(metricasPorCaja[c.id]?.ingresos || 0)}</span>
-                    </div>
+                    <div className="font-bold truncate text-white">{ev.titulo}</div>
+                    <div className="text-[10px] text-slate-300 mt-0.5">{ev.cliente}</div>
                   </div>
                 );
               })}
             </div>
           </div>
+        )}
 
-          {/* Tarjetas Principales del General */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            
-            {/* Saldo Total Consolidado */}
-            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-black text-amber-950">Saldo Total en Salón</span>
-                <div className="w-7 h-7 rounded-lg bg-amber-200/70 text-amber-900 flex items-center justify-center">
-                  <Wallet className="w-4 h-4" />
-                </div>
+      </div>
+
+      {/* =====================================================================
+          2. NAVEGACIÓN ENTRE SECCIONES DE CAJA
+          Cajas & Cuentas | Resultado Mensual | Control de Fijos | Proveedores | Importar Excel
+         ===================================================================== */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs font-bold">
+        <button
+          onClick={() => setSeccionCaja('cajas')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl transition-all cursor-pointer whitespace-nowrap ${
+            seccionCaja === 'cajas'
+              ? 'bg-[#2F3A2A] text-[#F6F3E9] shadow-md border border-[#C6A96A]/60'
+              : 'bg-white text-slate-600 hover:text-slate-900 border border-[#E3DCCE]'
+          }`}
+        >
+          <Wallet className="w-4 h-4 text-[#C6A96A]" />
+          <span>Cuentas & Movimientos</span>
+        </button>
+
+        <button
+          onClick={() => setSeccionCaja('resultado')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl transition-all cursor-pointer whitespace-nowrap ${
+            seccionCaja === 'resultado'
+              ? 'bg-[#2F3A2A] text-[#F6F3E9] shadow-md border border-[#C6A96A]/60'
+              : 'bg-white text-slate-600 hover:text-slate-900 border border-[#E3DCCE]'
+          }`}
+        >
+          <Layers className="w-4 h-4 text-[#C6A96A]" />
+          <span>Resultado Mensual (Punto 6)</span>
+        </button>
+
+        <button
+          onClick={() => setSeccionCaja('fijos')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl transition-all cursor-pointer whitespace-nowrap ${
+            seccionCaja === 'fijos'
+              ? 'bg-[#2F3A2A] text-[#F6F3E9] shadow-md border border-[#C6A96A]/60'
+              : 'bg-white text-slate-600 hover:text-slate-900 border border-[#E3DCCE]'
+          }`}
+        >
+          <Building className="w-4 h-4 text-[#C6A96A]" />
+          <span>Control de Fijos (Punto 5)</span>
+        </button>
+
+        <button
+          onClick={() => setSeccionCaja('proveedores')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl transition-all cursor-pointer whitespace-nowrap ${
+            seccionCaja === 'proveedores'
+              ? 'bg-[#2F3A2A] text-[#F6F3E9] shadow-md border border-[#C6A96A]/60'
+              : 'bg-white text-slate-600 hover:text-slate-900 border border-[#E3DCCE]'
+          }`}
+        >
+          <Store className="w-4 h-4 text-[#C6A96A]" />
+          <span>Proveedores ({listaProveedores.length})</span>
+        </button>
+
+        <button
+          onClick={() => setSeccionCaja('importar')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl transition-all cursor-pointer whitespace-nowrap ${
+            seccionCaja === 'importar'
+              ? 'bg-[#2F3A2A] text-[#F6F3E9] shadow-md border border-[#C6A96A]/60'
+              : 'bg-white text-slate-600 hover:text-slate-900 border border-[#E3DCCE]'
+          }`}
+        >
+          <FileSpreadsheet className="w-4 h-4 text-[#C6A96A]" />
+          <span>Importar Excel (Punto 8)</span>
+        </button>
+      </div>
+
+      {/* =====================================================================
+          SECCIÓN A: CUENTAS & MOVIMIENTOS TRADICIONALES
+         ===================================================================== */}
+      {seccionCaja === 'cajas' && (
+        <div className="space-y-6">
+          
+          {/* Pestañas de las 4 Cajas + General */}
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 shadow-soft border border-[#E3DCCE]">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#E3DCCE]">
+              <div>
+                <h3 className="text-xl font-bold text-[#2F3A2A] font-serif">
+                  Planillas de Caja por Cuenta
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Organizadas por cada vía de ingreso y gasto solicitada por la dueña.
+                </p>
               </div>
-              <div className="text-2xl font-black text-amber-950">
-                {formatARS(metricasPorCaja.general.saldo)}
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={handleAbrirTraspaso}
+                  className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-all cursor-pointer"
+                >
+                  <ArrowLeftRight className="w-3.5 h-3.5" />
+                  <span>Traspaso entre Cajas</span>
+                </button>
+
+                <button
+                  onClick={handleExportCSV}
+                  className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-[#E3DCCE] transition-all cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Exportar Excel</span>
+                </button>
+
+                <button
+                  onClick={() => handleAbrirNuevo(subTabActiva !== 'general' ? subTabActiva : 'naranja')}
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] border border-[#C6A96A] shadow-md transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4 text-[#C6A96A]" />
+                  <span>{subTabActiva === 'general' ? '+ Nuevo Movimiento' : `+ Cargar en ${cajaActivaConfig?.nombre}`}</span>
+                </button>
               </div>
-              <p className="text-[11px] text-amber-800 mt-1">Suma de las 4 cuentas</p>
             </div>
 
-            {/* Total Ingresos Generales */}
-            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-black text-emerald-950">Total Ingresos</span>
-                <div className="w-7 h-7 rounded-lg bg-emerald-200/70 text-emerald-900 flex items-center justify-center">
-                  <ArrowUpRight className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="text-2xl font-black text-emerald-950">
-                {formatARS(metricasPorCaja.general.ingresos)}
-              </div>
-              <p className="text-[11px] text-emerald-800 mt-1">Todas las cajas sumadas</p>
-            </div>
+            {/* Selector de Cajas */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mt-4">
+              {CAJAS_DEF.map(caja => {
+                const Icono = caja.icono;
+                const isActive = subTabActiva === caja.id;
+                const saldo = metricasPorCaja[caja.id]?.saldo || 0;
 
-            {/* Total Gastos Generales */}
-            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-black text-rose-950">Total Gastos</span>
-                <div className="w-7 h-7 rounded-lg bg-rose-200/70 text-rose-900 flex items-center justify-center">
-                  <ArrowDownRight className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="text-2xl font-black text-rose-950">
-                {formatARS(metricasPorCaja.general.egresos)}
-              </div>
-              <p className="text-[11px] text-rose-800 mt-1">Costos fijos, variables y retiros</p>
-            </div>
-
-            {/* Retiros Personales */}
-            <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-black text-indigo-950">Retiros Personales</span>
-                <div className="w-7 h-7 rounded-lg bg-indigo-200/70 text-indigo-900 flex items-center justify-center">
-                  <Users className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="text-2xl font-black text-indigo-950">
-                {formatARS(metricasPorCaja.general.retiros)}
-              </div>
-              <p className="text-[11px] text-indigo-800 mt-1">Leandro, Jesica e Iris</p>
-            </div>
-
-          </div>
-
-          {/* Desglose de Gastos por Categoría */}
-          {metricasPorCaja.general.egresos > 0 && (
-            <div className="pt-3 border-t border-slate-100">
-              <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2.5">
-                Desglose de gastos por categoría ({filtroMes === 'todos' ? 'Histórico' : 'Mes seleccionado'}):
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                {Object.entries(desgloseCategorias).map(([cat, total]) => {
-                  const pct = Math.round((total / (metricasPorCaja.general.egresos || 1)) * 100);
-                  return (
-                    <div key={cat} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                      <div className="flex justify-between items-center text-xs font-semibold mb-1">
-                        <span className="text-slate-700 truncate pr-1">{cat}</span>
-                        <span className="text-slate-500 font-bold">{pct}%</span>
+                return (
+                  <button
+                    key={caja.id}
+                    onClick={() => setSubTabActiva(caja.id)}
+                    className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex flex-col justify-between ${
+                      isActive 
+                        ? `${caja.tabActive} border-transparent ring-2 ring-offset-1 ring-slate-400/30 scale-[1.01]` 
+                        : 'bg-slate-50/80 hover:bg-slate-100 text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1 mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${isActive ? 'bg-white/20 text-white' : 'bg-white text-slate-700 shadow-xs'}`}>
+                          <Icono className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="font-bold text-xs">{caja.nombre}</span>
                       </div>
-                      <div className="text-sm font-bold text-slate-900">{formatARS(total)}</div>
-                      <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-1.5">
-                        <div className="bg-amber-600 h-full rounded-full" style={{ width: `${pct}%` }} />
+                      <span className={`w-2 h-2 rounded-full ${caja.dot}`} />
+                    </div>
+                    <div>
+                      <div className="text-[10px] opacity-80 font-medium">Saldo:</div>
+                      <div className={`text-xs font-bold ${isActive ? 'text-white' : saldo >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>
+                        {formatARS(saldo)}
                       </div>
                     </div>
-                  );
-                })}
+                  </button>
+                );
+              })}
+
+              {/* General Consolidado */}
+              <button
+                onClick={() => setSubTabActiva('general')}
+                className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex flex-col justify-between ${
+                  subTabActiva === 'general'
+                    ? 'bg-[#2F3A2A] text-[#F6F3E9] shadow-md border-[#C6A96A] ring-2 ring-[#C6A96A]/40 scale-[1.01]'
+                    : 'bg-slate-50/80 hover:bg-slate-100 text-slate-700 border-slate-200'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-1 mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${subTabActiva === 'general' ? 'bg-[#C6A96A]/20 text-[#C6A96A]' : 'bg-white text-slate-700'}`}>
+                      <Layers className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="font-bold text-xs">General</span>
+                  </div>
+                  <span className="text-[10px] font-bold px-1.5 rounded bg-[#C6A96A]/20 text-[#C6A96A]">Total</span>
+                </div>
+                <div>
+                  <div className="text-[10px] opacity-80 font-medium">Total en Salón:</div>
+                  <div className={`text-xs font-bold ${subTabActiva === 'general' ? 'text-[#C6A96A]' : 'text-slate-900'}`}>
+                    {formatARS(metricasPorCaja.general.saldo)}
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Barra de Filtros de la Tabla */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl shadow-soft border border-[#E3DCCE] text-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200">
+                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                <select
+                  value={filtroMes}
+                  onChange={(e) => setFiltroMes(e.target.value)}
+                  className="bg-transparent font-bold text-slate-800 focus:outline-none cursor-pointer"
+                >
+                  <option value="todos">Todos los Meses</option>
+                  {mesesDisponibles.map(m => (
+                    <option key={m} value={m}>{m} {m === mesActualStr ? '(Actual)' : ''}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                {['todos', 'ingreso', 'egreso'].map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setFiltroTipo(t)}
+                    className={`px-2.5 py-1 rounded-lg font-bold transition-all capitalize cursor-pointer ${
+                      filtroTipo === t ? 'bg-[#2F3A2A] text-[#F6F3E9]' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {t === 'todos' ? 'Todos' : (t === 'ingreso' ? 'Ingresos' : 'Egresos')}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Buscar concepto, proveedor, cargo..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="pl-8 pr-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200 w-full sm:w-64 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Tabla de Movimientos */}
+          <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-soft border border-[#E3DCCE] overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead>
+                  <tr className="border-b border-[#E3DCCE] text-slate-500 font-bold uppercase text-[10px]">
+                    <th className="py-2.5 px-3">Fecha</th>
+                    <th className="py-2.5 px-3">Cuenta / Caja</th>
+                    <th className="py-2.5 px-3">Concepto & Proveedor</th>
+                    <th className="py-2.5 px-3">Categoría</th>
+                    <th className="py-2.5 px-3">Cargado Por</th>
+                    <th className="py-2.5 px-3 text-right">Monto</th>
+                    <th className="py-2.5 px-3 text-right">Acción</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E3DCCE]/60">
+                  {movimientosFiltrados.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="py-8 text-center text-slate-400">
+                        No hay movimientos cargados con los filtros seleccionados.
+                      </td>
+                    </tr>
+                  ) : (
+                    movimientosFiltrados.map(m => {
+                      const cInfo = CAJAS_DEF.find(c => c.id === getCajaMovimiento(m));
+                      const esIng = m.tipo === 'ingreso';
+
+                      return (
+                        <tr key={m.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-2.5 px-3 font-semibold text-slate-700 whitespace-nowrap">
+                            {m.fecha}
+                          </td>
+                          <td className="py-2.5 px-3 whitespace-nowrap">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border ${cInfo?.badge || 'bg-slate-100 text-slate-800'}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${cInfo?.dot || 'bg-slate-400'}`} />
+                              {cInfo?.nombre || m.caja}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <div className="font-bold text-slate-900">{m.concepto}</div>
+                            <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
+                              {m.proveedor && <span className="text-[#5A6B4A] font-semibold">📍 {m.proveedor}</span>}
+                              {m.origen && <span className="bg-emerald-50 text-emerald-800 px-1 rounded">Origen: {m.origen}</span>}
+                              {m.notas && <span className="truncate max-w-xs italic">"{m.notas}"</span>}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-3 whitespace-nowrap">
+                            <div className="font-semibold text-slate-800">{m.categoria}</div>
+                            <div className="text-[10px] text-slate-400">{m.subcategoria}</div>
+                          </td>
+                          <td className="py-2.5 px-3 text-[11px] text-slate-600 whitespace-nowrap">
+                            {m.cargadoPor || m.cargo || 'Jesica'}
+                          </td>
+                          <td className="py-2.5 px-3 text-right whitespace-nowrap font-bold text-sm">
+                            <span className={esIng ? 'text-emerald-700' : 'text-rose-700'}>
+                              {esIng ? '+' : '-'} {formatARS(m.monto)}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => handleAbrirEditar(m)}
+                                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"
+                                title="Editar movimiento"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (confirm(`¿Eliminar movimiento "${m.concepto}"?`)) {
+                                    onEliminarMovimiento(m.id);
+                                  }
+                                }}
+                                className="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50"
+                                title="Eliminar movimiento"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* =====================================================================
+          SECCIÓN B: RESULTADO MENSUAL (PUNTO 6)
+         ===================================================================== */}
+      {seccionCaja === 'resultado' && (
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-6 shadow-soft border border-[#E3DCCE] space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#E3DCCE]">
+            <div>
+              <h3 className="text-xl font-bold text-[#2F3A2A] font-serif">
+                Cuadro de Resultado Mensual & Proyección Operativa
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Comparativa mensual, cálculo del punto de equilibrio y financiamiento familiar aislado.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleExportResultadoExcel}
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] text-xs font-bold rounded-xl border border-[#C6A96A] shadow-sm transition-all cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5 text-[#C6A96A]" />
+                <span>Exportar Resultado a Excel</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Selectores de Meses para Comparar */}
+          <div className="flex items-center gap-4 text-xs font-bold text-slate-700">
+            <div className="flex items-center gap-2">
+              <span>Columna 1:</span>
+              <select
+                value={mesResultadoActivo}
+                onChange={(e) => setMesResultadoActivo(e.target.value)}
+                className="px-3 py-1.5 rounded-xl border border-[#E3DCCE] bg-slate-50"
+              >
+                {mesesDisponibles.map(m => (
+                  <option key={m} value={m}>{m} {m === mesActualStr ? '(Actual)' : ''}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span>Columna 2:</span>
+              <select
+                value={segundoMesResultado}
+                onChange={(e) => setSegundoMesResultado(e.target.value)}
+                className="px-3 py-1.5 rounded-xl border border-[#E3DCCE] bg-slate-50"
+              >
+                {mesesDisponibles.map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Tabla de Resultados Comparativa */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead>
+                <tr className="border-b-2 border-[#2F3A2A] text-[#2F3A2A] font-bold uppercase text-[11px]">
+                  <th className="py-3 px-4">Línea del Cuadro Financiero</th>
+                  <th className="py-3 px-4 text-right">{mesResultadoActivo}</th>
+                  <th className="py-3 px-4 text-right">{segundoMesResultado}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium">
+                
+                {/* 1. Ingresos Operativos */}
+                <tr className="bg-slate-50/60 font-bold text-[#2F3A2A]">
+                  <td className="py-2.5 px-4">TOTAL INGRESOS OPERATIVOS (Eventos)</td>
+                  <td className="py-2.5 px-4 text-right text-emerald-800 font-bold">{formatARS(metricasMes1.ingOperativos)}</td>
+                  <td className="py-2.5 px-4 text-right text-emerald-800 font-bold">{formatARS(metricasMes2.ingOperativos)}</td>
+                </tr>
+
+                {/* 2. Variables */}
+                <tr>
+                  <td className="py-2 px-4 pl-8 text-slate-600">• Insumos (Carnes, Verduras, Bebida, Fiambres)</td>
+                  <td className="py-2 px-4 text-right">{formatARS(metricasMes1.varInsumos)}</td>
+                  <td className="py-2 px-4 text-right">{formatARS(metricasMes2.varInsumos)}</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-4 pl-8 text-slate-600">• Personal (Cocina, Limpieza, Mozos, Música)</td>
+                  <td className="py-2 px-4 text-right">{formatARS(metricasMes1.varPersonal)}</td>
+                  <td className="py-2 px-4 text-right">{formatARS(metricasMes2.varPersonal)}</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-4 pl-8 text-slate-600">• Otros Variables (Librería, Proveedores, Marketing)</td>
+                  <td className="py-2 px-4 text-right">{formatARS(metricasMes1.varOtros)}</td>
+                  <td className="py-2 px-4 text-right">{formatARS(metricasMes2.varOtros)}</td>
+                </tr>
+                <tr className="font-semibold text-slate-800 bg-slate-50/30">
+                  <td className="py-2 px-4 pl-6">Total Variables</td>
+                  <td className="py-2 px-4 text-right">{formatARS(metricasMes1.totalVariables)}</td>
+                  <td className="py-2 px-4 text-right">{formatARS(metricasMes2.totalVariables)}</td>
+                </tr>
+
+                {/* 3. Costos Fijos */}
+                <tr>
+                  <td className="py-2 px-4 pl-6 text-slate-800">
+                    Costos Fijos del Salón {metricasMes1.esFijosEstimado ? '(Estimados de referencia)' : '(Cargados)'}
+                  </td>
+                  <td className="py-2 px-4 text-right">{formatARS(metricasMes1.fijosUsados)}</td>
+                  <td className="py-2 px-4 text-right">{formatARS(metricasMes2.fijosUsados)}</td>
+                </tr>
+
+                {/* 4. RESULTADO OPERATIVO */}
+                <tr className="bg-amber-50/60 font-bold text-sm text-[#2F3A2A] border-y border-amber-200">
+                  <td className="py-3 px-4">RESULTADO OPERATIVO (Ingresos − Variables − Fijos)</td>
+                  <td className={`py-3 px-4 text-right ${metricasMes1.resultadoOperativo >= 0 ? 'text-emerald-800' : 'text-rose-800'}`}>
+                    {formatARS(metricasMes1.resultadoOperativo)}
+                  </td>
+                  <td className={`py-3 px-4 text-right ${metricasMes2.resultadoOperativo >= 0 ? 'text-emerald-800' : 'text-rose-800'}`}>
+                    {formatARS(metricasMes2.resultadoOperativo)}
+                  </td>
+                </tr>
+
+                {/* 5. Retiros de Socios */}
+                <tr>
+                  <td className="py-2 px-4 pl-6 text-slate-600">Retiros de Socios (Leandro, Jesica, Iris)</td>
+                  <td className="py-2 px-4 text-right text-rose-700">− {formatARS(metricasMes1.retirosTotal)}</td>
+                  <td className="py-2 px-4 text-right text-rose-700">− {formatARS(metricasMes2.retirosTotal)}</td>
+                </tr>
+
+                {/* 6. Financiamiento Familiar (Línea aparte, nunca sumada a ingresos) */}
+                <tr className="bg-purple-50/40 text-purple-950 font-semibold">
+                  <td className="py-2 px-4 pl-6">Financiamiento Familiar (Tramos recibidos − Devoluciones)</td>
+                  <td className="py-2 px-4 text-right">{formatARS(metricasMes1.financiamientoNeto)}</td>
+                  <td className="py-2 px-4 text-right">{formatARS(metricasMes2.financiamientoNeto)}</td>
+                </tr>
+
+                {/* 7. CAJA FINAL */}
+                <tr className="bg-[#2F3A2A] text-[#F6F3E9] font-bold text-base border-t-2 border-[#C6A96A]">
+                  <td className="py-3.5 px-4 font-serif">CAJA FINAL DEL MES</td>
+                  <td className="py-3.5 px-4 text-right text-[#C6A96A]">{formatARS(metricasMes1.cajaFinal)}</td>
+                  <td className="py-3.5 px-4 text-right text-[#C6A96A]">{formatARS(metricasMes2.cajaFinal)}</td>
+                </tr>
+
+                {/* 8. Indicadores Clave: Datos Reales y Punto de Equilibrio */}
+                <tr className="text-slate-500 text-[11px] bg-slate-50/80">
+                  <td className="py-2 px-4 font-bold">Datos Reales Cargados (%)</td>
+                  <td className="py-2 px-4 text-right font-bold text-slate-700">{metricasMes1.pctDatosReales}%</td>
+                  <td className="py-2 px-4 text-right font-bold text-slate-700">{metricasMes2.pctDatosReales}%</td>
+                </tr>
+
+                <tr className="text-slate-500 text-[11px] bg-slate-50/80">
+                  <td className="py-2 px-4 font-bold">Punto de Equilibrio (eventos base para cubrir fijos)</td>
+                  <td className="py-2 px-4 text-right font-bold text-[#5A6B4A]">{metricasMes1.puntoEquilibrio} eventos</td>
+                  <td className="py-2 px-4 text-right font-bold text-[#5A6B4A]">{metricasMes2.puntoEquilibrio} eventos</td>
+                </tr>
+
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          SECCIÓN C: CONTROL DE COSTOS FIJOS (PUNTO 5)
+         ===================================================================== */}
+      {seccionCaja === 'fijos' && (
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-6 shadow-soft border border-[#E3DCCE] space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#E3DCCE]">
+            <div>
+              <h3 className="text-xl font-bold text-[#2F3A2A] font-serif">
+                Control de Costos Fijos Mensuales
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Seguimiento de servicios e impuestos para el período {filtroMes === 'todos' ? mesActualStr : filtroMes}.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold px-3 py-1 rounded-xl bg-[#2F3A2A]/10 text-[#2F3A2A]">
+                Responsable principal: Gabriela
+              </span>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead>
+                <tr className="border-b border-[#E3DCCE] text-slate-500 font-bold uppercase text-[10px]">
+                  <th className="py-2.5 px-3">Concepto Fijo</th>
+                  <th className="py-2.5 px-3">Subcategoría</th>
+                  <th className="py-2.5 px-3">Monto del Mes</th>
+                  <th className="py-2.5 px-3">Vencimiento</th>
+                  <th className="py-2.5 px-3">Responsable</th>
+                  <th className="py-2.5 px-3 text-right">Estado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E3DCCE]/60">
+                {estadoCostosFijos.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-2.5 px-3 font-bold text-slate-900">{item.concepto}</td>
+                    <td className="py-2.5 px-3 text-slate-600">{item.subcategoria}</td>
+                    <td className="py-2.5 px-3 font-bold text-slate-900">
+                      {formatARS(item.montoMostrar)} {item.esEstimado && <span className="text-[10px] text-amber-700 font-semibold">(Estimado)</span>}
+                    </td>
+                    <td className="py-2.5 px-3 text-slate-700">Día {item.diaVencimiento} de cada mes</td>
+                    <td className="py-2.5 px-3 font-semibold text-slate-700">{item.responsable}</td>
+                    <td className="py-2.5 px-3 text-right">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                        item.estado === 'Pagado' 
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                          : item.estado === 'Vencido' 
+                          ? 'bg-rose-100 text-rose-800 border-rose-300 animate-pulse' 
+                          : 'bg-amber-100 text-amber-800 border-amber-300'
+                      }`}>
+                        {item.estado === 'Pagado' ? '✓ Pagado' : item.estado === 'Vencido' ? '⚠️ Vencido' : '⏳ Pendiente'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          SECCIÓN D: DIRECTORIO DE PROVEEDORES (PUNTO 10)
+         ===================================================================== */}
+      {seccionCaja === 'proveedores' && (
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-6 shadow-soft border border-[#E3DCCE] space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#E3DCCE]">
+            <div>
+              <h3 className="text-xl font-bold text-[#2F3A2A] font-serif">
+                Directorio Inteligente de Proveedores
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Conocimiento que queda en el salón: precios históricos, fecha de última compra y acumulado anual.
+              </p>
+            </div>
+            <span className="text-xs font-bold text-slate-500">
+              {listaProveedores.length} proveedores registrados
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead>
+                <tr className="border-b border-[#E3DCCE] text-slate-500 font-bold uppercase text-[10px]">
+                  <th className="py-2.5 px-3">Proveedor</th>
+                  <th className="py-2.5 px-3">Rubro / Categoría</th>
+                  <th className="py-2.5 px-3">Último Precio Pagado</th>
+                  <th className="py-2.5 px-3">Fecha Último Pago</th>
+                  <th className="py-2.5 px-3">Total del Año</th>
+                  <th className="py-2.5 px-3">Teléfono</th>
+                  <th className="py-2.5 px-3 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E3DCCE]/60">
+                {listaProveedores.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="py-8 text-center text-slate-400">
+                      No hay compras a proveedores registradas en los movimientos aún.
+                    </td>
+                  </tr>
+                ) : (
+                  listaProveedores.map((p, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-2.5 px-3 font-bold text-slate-900">{p.nombre}</td>
+                      <td className="py-2.5 px-3 text-slate-600">{p.categoria}</td>
+                      <td className="py-2.5 px-3 font-bold text-[#2F3A2A]">{formatARS(p.ultimoPrecio)}</td>
+                      <td className="py-2.5 px-3 text-slate-600">{p.ultimaFecha}</td>
+                      <td className="py-2.5 px-3 font-bold text-emerald-800">{formatARS(p.totalAnio)}</td>
+                      <td className="py-2.5 px-3 text-slate-600 font-mono">
+                        {p.telefono || <span className="text-slate-300 italic">Sin teléfono</span>}
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        <button
+                          onClick={() => {
+                            setModalProveedor(p);
+                            setProvTel(p.telefono || '');
+                            setProvNotas(p.notas || '');
+                          }}
+                          className="px-2.5 py-1 text-xs font-bold rounded-lg border border-[#E3DCCE] hover:bg-slate-100 text-slate-700"
+                        >
+                          Editar Datos
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          SECCIÓN E: IMPORTAR EXCEL (PUNTO 8)
+         ===================================================================== */}
+      {seccionCaja === 'importar' && (
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-6 shadow-soft border border-[#E3DCCE] space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E3DCCE]">
+            <div>
+              <h3 className="text-xl font-bold text-[#2F3A2A] font-serif">
+                Importación Masiva de Excel
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Migrá planillas de gerencia al sistema con validación fila por fila y detección de duplicados.
+              </p>
+            </div>
+
+            <button
+              onClick={handleDescargarPlantilla}
+              className="flex items-center gap-2 px-4 py-2.5 bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] text-xs font-bold rounded-xl border border-[#C6A96A] shadow-md transition-all cursor-pointer self-start sm:self-auto"
+            >
+              <Download className="w-4 h-4 text-[#C6A96A]" />
+              <span>Descargar Plantilla Oficial Moments (.xlsx)</span>
+            </button>
+          </div>
+
+          {/* Selector de Archivo */}
+          <div className="p-6 rounded-3xl bg-[#F6F3E9] border-2 border-dashed border-[#C6A96A]/60 text-center space-y-3">
+            <Upload className="w-8 h-8 text-[#5A6B4A] mx-auto" />
+            <h4 className="text-sm font-bold text-[#2F3A2A]">
+              Seleccioná o arrastrá el archivo Excel (.xlsx o .xls)
+            </h4>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              Si usás la plantilla oficial se importa directo. Si es un Excel antiguo de gerencia, podés mapear las columnas manualmente.
+            </p>
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={handleArchivoSeleccionado}
+              className="text-xs file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#2F3A2A] file:text-[#F6F3E9] file:cursor-pointer cursor-pointer"
+            />
+          </div>
+
+          {/* Resumen de Importación Previa */}
+          {resumenImportacion && (
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs">
+              <strong className="block font-bold mb-1">¡Importación completada!</strong>
+              <div>✓ {resumenImportacion.importados} movimientos importados correctamente.</div>
+              {resumenImportacion.errores > 0 && <div>⚠️ {resumenImportacion.errores} filas con error fueron omitidas.</div>}
+              {resumenImportacion.duplicadosOmitidos > 0 && <div>🟡 {resumenImportacion.duplicadosOmitidos} posibles duplicados no fueron importados.</div>}
+            </div>
+          )}
+
+          {/* Previsualización de Filas Validadas */}
+          {filasPreview.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-700">
+                  Previsualización ({filasPreview.length} filas analizadas)
+                </span>
+                
+                <button
+                  onClick={handleConfirmarImportacion}
+                  disabled={importando}
+                  className="px-6 py-2.5 bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] text-xs font-bold rounded-xl border border-[#C6A96A] shadow-md transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {importando ? 'Importando...' : 'Confirmar e Importar Filas Válidas'}
+                </button>
+              </div>
+
+              <div className="overflow-x-auto max-h-80 border border-[#E3DCCE] rounded-2xl">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-slate-100 sticky top-0 font-bold text-[10px] text-slate-600 uppercase">
+                    <tr>
+                      <th className="py-2 px-3">Estado</th>
+                      <th className="py-2 px-3">Fila</th>
+                      <th className="py-2 px-3">Fecha</th>
+                      <th className="py-2 px-3">Concepto</th>
+                      <th className="py-2 px-3">Tipo</th>
+                      <th className="py-2 px-3">Categoría</th>
+                      <th className="py-2 px-3">Monto</th>
+                      <th className="py-2 px-3">Caja</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filasPreview.map((f, i) => (
+                      <tr 
+                        key={i} 
+                        className={
+                          f.estado === 'ok' ? 'bg-emerald-50/40 text-emerald-950' : 
+                          f.estado === 'duplicado' ? 'bg-amber-50/60 text-amber-950' : 
+                          'bg-rose-50/60 text-rose-950'
+                        }
+                      >
+                        <td className="py-2 px-3 font-bold whitespace-nowrap">
+                          {f.estado === 'ok' && '🟢 OK'}
+                          {f.estado === 'duplicado' && '🟡 Posible Duplicado'}
+                          {f.estado === 'error' && `🔴 Error: ${f.errores.join(', ')}`}
+                        </td>
+                        <td className="py-2 px-3">#{f.numFila}</td>
+                        <td className="py-2 px-3 whitespace-nowrap">{f.fecha}</td>
+                        <td className="py-2 px-3 font-medium">{f.concepto}</td>
+                        <td className="py-2 px-3 capitalize">{f.tipo}</td>
+                        <td className="py-2 px-3">{f.categoria} / {f.subcategoria}</td>
+                        <td className="py-2 px-3 font-bold">{formatARS(f.monto)}</td>
+                        <td className="py-2 px-3 capitalize">{f.caja}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -814,557 +1981,425 @@ export default function CajaView({
         </div>
       )}
 
-      {/* -------------------------------------------------------------------
-          3. BARRA DE FILTROS Y BÚSQUEDA DENTRO DE LA PLANILLA
-         ------------------------------------------------------------------- */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl shadow-soft border border-moments-border">
-        
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-          <span className="text-xs font-bold text-slate-500 mr-1 hidden sm:inline">Mostrar:</span>
-          
-          <button
-            onClick={() => setFiltroTipo('todos')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
-              filtroTipo === 'todos' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            Todos
-          </button>
-          
-          <button
-            onClick={() => setFiltroTipo('ingreso')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
-              filtroTipo === 'ingreso' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-emerald-800 hover:bg-emerald-50'
-            }`}
-          >
-            Solo Ingresos
-          </button>
-          
-          <button
-            onClick={() => setFiltroTipo('egreso')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
-              filtroTipo === 'egreso' ? 'bg-rose-600 text-white' : 'bg-slate-100 text-rose-800 hover:bg-rose-50'
-            }`}
-          >
-            Solo Gastos
-          </button>
-
-          {/* Filtro extra si está en la pestaña General para aislar una caja */}
-          {subTabActiva === 'general' && (
-            <div className="flex items-center gap-1 ml-2 pl-2 border-l border-slate-200">
-              <span className="text-[11px] font-bold text-slate-400">Caja:</span>
-              <select
-                value={filtroCajaGeneral}
-                onChange={(e) => setFiltroCajaGeneral(e.target.value)}
-                className="bg-slate-100 text-slate-700 text-xs font-bold rounded-lg px-2 py-1 border border-slate-200 focus:outline-none cursor-pointer"
-              >
-                <option value="todas">Todas las Cajas</option>
-                <option value="naranja">Solo Naranja</option>
-                <option value="banco_nacion">Solo Banco Nación</option>
-                <option value="mercado_pago">Solo Mercado Pago</option>
-                <option value="efectivo">Solo Efectivo</option>
-              </select>
-            </div>
-          )}
-        </div>
-
-        {/* Buscador */}
-        <div className="relative sm:w-72">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Buscar por concepto, responsable..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
-          />
-          {busqueda && (
-            <button 
-              onClick={() => setBusqueda('')} 
-              className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-
-      </div>
-
-      {/* -------------------------------------------------------------------
-          4. TABLA TIPO PLANILLA EXCEL (FILTRADA POR LA CAJA ACTIVA)
-         ------------------------------------------------------------------- */}
-      <div className="bg-white rounded-3xl shadow-soft border border-moments-border overflow-hidden">
-        
-        {/* Cabecera de la tabla */}
-        <div className="p-4 bg-slate-50/60 border-b border-slate-100 flex items-center justify-between">
-          <div className="text-xs font-black text-slate-700 flex items-center gap-2">
-            <span>
-              {subTabActiva === 'general' ? 'Movimientos de Todas las Cajas' : `Planilla de Movimientos: Caja ${cajaActivaConfig?.nombre}`}
-            </span>
-            <span className="text-[11px] font-bold px-2 py-0.2 rounded-full bg-slate-200 text-slate-700">
-              {movimientosFiltrados.length} registros
-            </span>
-          </div>
-
-          <button
-            onClick={() => abrirModalNuevo(subTabActiva !== 'general' ? subTabActiva : 'naranja')}
-            className="text-xs font-bold text-amber-700 hover:text-amber-900 cursor-pointer flex items-center gap-1"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Agregar fila</span>
-          </button>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-100/90 text-slate-700 font-black uppercase tracking-wider text-[11px] border-b border-slate-200">
-                <th className="py-3 px-4 whitespace-nowrap">Fecha</th>
-                {subTabActiva === 'general' && (
-                  <th className="py-3 px-3 whitespace-nowrap">Caja / Cuenta</th>
-                )}
-                <th className="py-3 px-4 min-w-[200px]">Concepto / Detalle</th>
-                <th className="py-3 px-3 whitespace-nowrap">Tipo</th>
-                <th className="py-3 px-3 min-w-[140px]">Categoría</th>
-                <th className="py-3 px-4 text-right whitespace-nowrap">Monto</th>
-                <th className="py-3 px-3 whitespace-nowrap">Quién Cargó</th>
-                <th className="py-3 px-3 text-center whitespace-nowrap">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {movimientosFiltrados.length === 0 ? (
-                <tr>
-                  <td colSpan={subTabActiva === 'general' ? 8 : 7} className="py-12 text-center text-slate-400 font-medium">
-                    <div className="max-w-xs mx-auto space-y-2">
-                      <Wallet className="w-8 h-8 text-slate-300 mx-auto" />
-                      <p className="text-xs">
-                        No hay movimientos registrados en {subTabActiva === 'general' ? 'este período' : `la Caja ${cajaActivaConfig?.nombre}`}.
-                      </p>
-                      <button
-                        onClick={() => abrirModalNuevo(subTabActiva !== 'general' ? subTabActiva : 'naranja')}
-                        className="text-xs font-bold text-amber-600 hover:text-amber-800 underline cursor-pointer"
-                      >
-                        + Cargar el primer movimiento ahora
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                movimientosFiltrados.map((m) => {
-                  const esIngreso = m.tipo === 'ingreso';
-                  const cajaKey = getCajaMovimiento(m);
-                  const cajaItem = CAJAS_DEF.find(c => c.id === cajaKey);
-
-                  return (
-                    <tr key={m.id} className="hover:bg-amber-50/20 transition-colors">
-                      
-                      {/* Fecha */}
-                      <td className="py-3 px-4 whitespace-nowrap text-slate-500 font-semibold">
-                        {m.fecha}
-                      </td>
-
-                      {/* Columna Caja (en vista General) */}
-                      {subTabActiva === 'general' && (
-                        <td className="py-3 px-3 whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[10px] font-black ${cajaItem?.badge || 'bg-slate-100 text-slate-700'}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${cajaItem?.dot || 'bg-slate-400'}`} />
-                            <span>{cajaItem?.nombre || 'General'}</span>
-                          </span>
-                        </td>
-                      )}
-
-                      {/* Concepto */}
-                      <td className="py-3 px-4">
-                        <div className="font-bold text-slate-900">{m.concepto}</div>
-                        {m.notas && (
-                          <div className="text-[11px] text-slate-400 mt-0.5">{m.notas}</div>
-                        )}
-                      </td>
-
-                      {/* Tipo (+ Ingreso / - Egreso) */}
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase ${
-                          esIngreso 
-                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
-                            : 'bg-rose-100 text-rose-800 border border-rose-300'
-                        }`}>
-                          {esIngreso ? '+ Ingreso' : '- Egreso'}
-                        </span>
-                      </td>
-
-                      {/* Categoría */}
-                      <td className="py-3 px-3">
-                        <div className="font-semibold text-slate-800">{m.categoria}</div>
-                        {m.subcategoria && (
-                          <div className="text-[10px] text-slate-500">{m.subcategoria}</div>
-                        )}
-                      </td>
-
-                      {/* Monto */}
-                      <td className={`py-3 px-4 text-right font-black text-sm whitespace-nowrap ${
-                        esIngreso ? 'text-emerald-700' : 'text-slate-900'
-                      }`}>
-                        {esIngreso ? '+' : '-'}{formatARS(m.monto)}
-                      </td>
-
-                      {/* Quién Cargó */}
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md text-[11px] border border-slate-200">
-                          {m.cargo}
-                        </span>
-                      </td>
-
-                      {/* Acciones (Editar y Eliminar) */}
-                      <td className="py-3 px-3 text-center whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={() => abrirModalEditar(m)}
-                            className="p-1.5 text-slate-400 hover:text-amber-700 rounded-lg hover:bg-amber-50 transition-colors cursor-pointer"
-                            title="Editar movimiento (cambiar monto, concepto o mover de caja)"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          
-                          <button
-                            onClick={() => {
-                              if (window.confirm(`¿Eliminar movimiento "${m.concepto}" de $ ${Number(m.monto).toLocaleString('es-AR')}?`)) {
-                                onEliminarMovimiento(m.id);
-                              }
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                            title="Eliminar movimiento"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-      </div>
-
-      {/* -------------------------------------------------------------------
-          5. MODAL DE CARGA Y EDICIÓN DE MOVIMIENTO (O TRASPASO)
-         ------------------------------------------------------------------- */}
+      {/* =====================================================================
+          MODAL: NUEVO / EDITAR MOVIMIENTO DE CAJA
+         ===================================================================== */}
       {modalAbierto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl shadow-modal max-w-lg w-full p-6 border border-moments-border">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto animate-fadeIn font-['Montserrat']">
+          <div className="relative w-full max-w-lg bg-[#F6F3E9] rounded-3xl shadow-2xl border border-[#C6A96A]/60 p-6 my-8 text-slate-800">
             
-            {/* Encabezado del modal */}
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
-              <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                {modoModal === 'traspaso' ? (
-                  <>
-                    <ArrowLeftRight className="w-5 h-5 text-indigo-600" />
-                    <span>Traspaso entre Cajas de Moments</span>
-                  </>
-                ) : modoModal === 'editar' ? (
-                  <>
-                    <Pencil className="w-5 h-5 text-amber-600" />
-                    <span>Editar Movimiento</span>
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-5 h-5 text-amber-600" />
-                    <span>Cargar en {CAJAS_DEF.find(c => c.id === formCaja)?.nombre || 'Caja'}</span>
-                  </>
-                )}
+            <div className="flex items-center justify-between pb-3 border-b border-[#E3DCCE] mb-4">
+              <h3 className="font-bold text-base text-[#2F3A2A] font-serif">
+                {modoModal === 'traspaso' ? 'Traspaso entre Cuentas' : (modoModal === 'editar' ? 'Editar Movimiento' : 'Cargar Movimiento')}
               </h3>
-              <button 
-                onClick={() => setModalAbierto(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 cursor-pointer"
-              >
+              <button onClick={() => setModalAbierto(false)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-full">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* FORMULARIO DE TRASPASO */}
-            {modoModal === 'traspaso' ? (
-              <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-                
-                <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-2xl text-[11px] text-indigo-900 font-medium leading-relaxed">
-                  Registra un movimiento entre cuentas (ejemplo: sacás efectivo del salón para depositarlo en el Banco Nación). Se crea el egreso en origen y el ingreso en destino automáticamente.
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-slate-700 font-bold mb-1">Caja Origen (Sale el dinero)</label>
-                    <select
-                      value={traspasoOrigen}
-                      onChange={(e) => setTraspasoOrigen(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-bold text-slate-800"
-                    >
-                      {CAJAS_DEF.map(c => (
-                        <option key={c.id} value={c.id}>{c.nombre} ({c.subtitulo})</option>
-                      ))}
-                    </select>
+            <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+              
+              {modoModal === 'traspaso' ? (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">Caja Origen (Sale)</label>
+                      <select
+                        value={traspasoOrigen}
+                        onChange={(e) => setTraspasoOrigen(e.target.value)}
+                        className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE] font-bold"
+                      >
+                        {CAJAS_DEF.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">Caja Destino (Entra)</label>
+                      <select
+                        value={traspasoDestino}
+                        onChange={(e) => setTraspasoDestino(e.target.value)}
+                        className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE] font-bold"
+                      >
+                        {CAJAS_DEF.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                      </select>
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Caja Destino (Entra el dinero)</label>
-                    <select
-                      value={traspasoDestino}
-                      onChange={(e) => setTraspasoDestino(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-bold text-slate-800"
-                    >
-                      {CAJAS_DEF.map(c => (
-                        <option key={c.id} value={c.id}>{c.nombre} ({c.subtitulo})</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-slate-700 font-bold mb-1">Monto en ARS ($) *</label>
+                    <label className="block text-slate-700 font-bold mb-1">Monto del Traspaso *</label>
                     <input
                       type="number"
                       required
-                      min="1"
-                      placeholder="Ej: 500000"
                       value={traspasoMonto}
                       onChange={(e) => setTraspasoMonto(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-black text-slate-900"
+                      className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE] font-bold text-sm"
                     />
                   </div>
+                </>
+              ) : (
+                <>
+                  {/* Tipo de Movimiento */}
+                  <div className="grid grid-cols-2 gap-2 bg-white/70 p-1.5 rounded-2xl border border-[#E3DCCE]">
+                    <button
+                      type="button"
+                      onClick={() => setFormTipo('egreso')}
+                      className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                        formTipo === 'egreso' ? 'bg-[#2F3A2A] text-[#F6F3E9]' : 'text-slate-600'
+                      }`}
+                    >
+                      💸 Egreso / Gasto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormTipo('ingreso')}
+                      className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                        formTipo === 'ingreso' ? 'bg-[#5A6B4A] text-[#F6F3E9]' : 'text-slate-600'
+                      }`}
+                    >
+                      💰 Ingreso / Cobro
+                    </button>
+                  </div>
 
+                  {/* Fecha y Monto */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">Fecha</label>
+                      <input
+                        type="date"
+                        value={formFecha}
+                        onChange={(e) => setFormFecha(e.target.value)}
+                        className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE] font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">Monto ($ ARS) *</label>
+                      <input
+                        type="number"
+                        required
+                        value={formMonto}
+                        onChange={(e) => setFormMonto(e.target.value)}
+                        className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE] font-bold text-sm text-[#2F3A2A]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Concepto */}
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Fecha</label>
+                    <label className="block text-slate-700 font-bold mb-1">Concepto *</label>
                     <input
-                      type="date"
+                      type="text"
                       required
-                      value={traspasoFecha}
-                      onChange={(e) => setTraspasoFecha(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300"
+                      placeholder="Ej: Pago DJ, Compra bebidas, Seña Boda..."
+                      value={formConcepto}
+                      onChange={(e) => setFormConcepto(e.target.value)}
+                      className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE] font-bold"
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">Motivo / Concepto del Traspaso</label>
-                  <input
-                    type="text"
-                    required
-                    value={traspasoConcepto}
-                    onChange={(e) => setTraspasoConcepto(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-medium"
-                  />
-                </div>
+                  {/* Categoría y Subcategoría Reorganizadas */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">Categoría</label>
+                      <select
+                        value={formCategoria}
+                        onChange={(e) => {
+                          setFormCategoria(e.target.value);
+                          const subs = CATEGORIAS_CAJA[e.target.value] || [];
+                          setFormSubcategoria(subs[0] || '');
+                        }}
+                        className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE] font-bold"
+                      >
+                        {Object.keys(CATEGORIAS_CAJA).map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setModalAbierto(false)}
-                    className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 text-xs font-black bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
-                  >
-                    Confirmar Traspaso
-                  </button>
-                </div>
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">Subcategoría</label>
+                      <select
+                        value={formSubcategoria}
+                        onChange={(e) => setFormSubcategoria(e.target.value)}
+                        className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE] font-bold"
+                      >
+                        {(CATEGORIAS_CAJA[formCategoria] || []).map(sub => (
+                          <option key={sub} value={sub}>{sub}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
 
-              </form>
-            ) : (
-              /* FORMULARIO ESTÁNDAR: NUEVO O EDITAR */
-              <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-                
-                {/* 1. SELECTOR VISUAL DE CAJA (NARANJA / BNA / MP / EFECTIVO) */}
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1.5">
-                    ¿En qué Caja / Cuenta se registra? *
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {CAJAS_DEF.map(c => {
-                      const Icono = c.icono;
-                      const sel = formCaja === c.id;
-                      return (
+                  {/* Caja Destino */}
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Cuenta / Caja</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {CAJAS_DEF.map(c => (
                         <button
                           key={c.id}
                           type="button"
-                          onClick={() => {
-                            setFormCaja(c.id);
-                            if (c.id === 'naranja') setFormMetodo('Tarjeta Naranja');
-                            else if (c.id === 'banco_nacion') setFormMetodo('Transferencia BNA');
-                            else if (c.id === 'mercado_pago') setFormMetodo('Mercado Pago');
-                            else setFormMetodo('Efectivo');
-                          }}
-                          className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                            sel 
-                              ? `${c.tabActive} ring-2 ring-slate-400/20 scale-[1.02]` 
-                              : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                          onClick={() => setFormCaja(c.id)}
+                          className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all ${
+                            formCaja === c.id ? 'bg-[#2F3A2A] text-white border-[#C6A96A]' : 'bg-white text-slate-700 border-[#E3DCCE]'
                           }`}
                         >
-                          <div className="flex items-center justify-between mb-1">
-                            <Icono className="w-3.5 h-3.5" />
-                            {sel && <Check className="w-3 h-3 text-white" />}
-                          </div>
-                          <span className="font-extrabold text-[11px] truncate">{c.nombre}</span>
+                          {c.nombre}
                         </button>
-                      );
-                    })}
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                {/* 2. Tipo de Movimiento (Cobro vs Gasto) */}
-                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormTipo('egreso');
-                      if (formCategoria === 'Variables') {
-                        setFormSubcategoria(CATEGORIAS_CAJA['Variables'][0]);
-                      }
-                    }}
-                    className={`py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${
-                      formTipo === 'egreso' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    - Gasto / Egreso
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormTipo('ingreso');
-                      setFormCategoria('Variables');
-                      setFormSubcategoria('Proveedores de evento');
-                    }}
-                    className={`py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${
-                      formTipo === 'ingreso' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    + Cobro / Ingreso
-                  </button>
-                </div>
+                  {/* Vincular a Evento (Opcional) */}
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Vincular a Evento (Opcional)</label>
+                    <select
+                      value={formEventoId}
+                      onChange={(e) => setFormEventoId(e.target.value)}
+                      className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE]"
+                    >
+                      <option value="">-- Sin evento vinculado --</option>
+                      {(eventos || []).filter(e => e.tipo !== 'mantenimiento').map(ev => (
+                        <option key={ev.id} value={ev.id}>
+                          {ev.fecha} · {ev.titulo} ({ev.cliente})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* 3. Concepto y Monto */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="sm:col-span-2">
-                    <label className="block text-slate-700 font-bold mb-1">Concepto / Detalle *</label>
+                  {/* Proveedor y Origen */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">Proveedor / Destinatario</label>
+                      <input
+                        type="text"
+                        placeholder="Ej: Carnicería Don Juan"
+                        value={formProveedor}
+                        onChange={(e) => setFormProveedor(e.target.value)}
+                        className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE]"
+                      />
+                    </div>
+
+                    {formTipo === 'ingreso' ? (
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1">Origen del Ingreso</label>
+                        <select
+                          value={formOrigen}
+                          onChange={(e) => setFormOrigen(e.target.value)}
+                          className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE]"
+                        >
+                          <option value="Seña">Seña</option>
+                          <option value="Cuota">Cuota</option>
+                          <option value="Saldo final">Saldo final</option>
+                          <option value="Otro">Otro</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1">Responsable</label>
+                        <input
+                          type="text"
+                          value={formCargo}
+                          onChange={(e) => setFormCargo(e.target.value)}
+                          className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE]"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Notas */}
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Notas u Observaciones</label>
                     <input
                       type="text"
-                      required
-                      placeholder="Ej: Seña Boda Sofía / Compra de carnes Don Pedro"
-                      value={formConcepto}
-                      onChange={(e) => setFormConcepto(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-medium"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-700 font-bold mb-1">Monto en ARS ($) *</label>
-                    <input
-                      type="number"
-                      required
-                      min="1"
-                      placeholder="Ej: 450000"
-                      value={formMonto}
-                      onChange={(e) => setFormMonto(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-black text-slate-900"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-700 font-bold mb-1">Fecha</label>
-                    <input
-                      type="date"
-                      required
-                      value={formFecha}
-                      onChange={(e) => setFormFecha(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
-                    />
-                  </div>
-                </div>
-
-                {/* 4. Categoría y Subcategoría */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-slate-700 font-bold mb-1">Categoría Principal</label>
-                    <select
-                      value={formCategoria}
-                      onChange={(e) => {
-                        const nuevaCat = e.target.value;
-                        setFormCategoria(nuevaCat);
-                        setFormSubcategoria(CATEGORIAS_CAJA[nuevaCat]?.[0] || '');
-                      }}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
-                    >
-                      {Object.keys(CATEGORIAS_CAJA).map(c => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-700 font-bold mb-1">Subcategoría específica</label>
-                    <select
-                      value={formSubcategoria}
-                      onChange={(e) => setFormSubcategoria(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
-                    >
-                      {(CATEGORIAS_CAJA[formCategoria] || []).map(sub => (
-                        <option key={sub} value={sub}>{sub}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* 5. Quién Carga y Notas */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-slate-700 font-bold mb-1">Quién Carga</label>
-                    <select
-                      value={formCargo}
-                      onChange={(e) => setFormCargo(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-bold"
-                    >
-                      {USUARIOS.map(u => (
-                        <option key={u.id} value={u.nombre}>{u.nombre} ({u.badge})</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-700 font-bold mb-1">Observaciones / Notas (Opcional)</label>
-                    <input
-                      type="text"
-                      placeholder="Ej: Pago de mozos / Seña evento"
+                      placeholder="Detalles adicionales, número de recibo, etc..."
                       value={formNotas}
                       onChange={(e) => setFormNotas(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                      className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE]"
                     />
                   </div>
+                </>
+              )}
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#E3DCCE]">
+                <button
+                  type="button"
+                  onClick={() => setModalAbierto(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200/50 rounded-xl"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] text-xs font-bold rounded-xl border border-[#C6A96A] shadow-md transition-all cursor-pointer"
+                >
+                  Guardar en Caja
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MODAL: REGISTRAR TRAMO DE PRÉSTAMO FAMILIAR (PUNTO 12)
+         ===================================================================== */}
+      {modalTramoAbierto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto animate-fadeIn font-['Montserrat']">
+          <div className="relative w-full max-w-md bg-[#F6F3E9] rounded-3xl shadow-2xl border border-[#C6A96A]/60 p-6 my-8 text-slate-800">
+            
+            <div className="flex items-center justify-between pb-3 border-b border-[#E3DCCE] mb-4">
+              <div className="flex items-center gap-2">
+                <span className="w-8 h-8 rounded-xl bg-[#2F3A2A] text-[#C6A96A] flex items-center justify-center font-bold">
+                  <Plus className="w-4 h-4 text-[#C6A96A]" />
+                </span>
+                <h3 className="font-bold text-base text-[#2F3A2A] font-serif">
+                  Registrar Tramo de Préstamo Familiar
+                </h3>
+              </div>
+              <button onClick={() => setModalTramoAbierto(false)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-full">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleGuardarTramo} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Monto del Tramo Recibido *</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 font-bold text-slate-400">$</span>
+                  <input
+                    type="number"
+                    required
+                    placeholder="Ej: 20000000"
+                    value={tramoMonto}
+                    onChange={(e) => setTramoMonto(e.target.value)}
+                    className="w-full pl-7 pr-3 py-2 text-sm font-bold bg-white rounded-xl border border-[#E3DCCE] text-[#2F3A2A]"
+                    autoFocus
+                  />
                 </div>
-
-                {/* Botones de acción */}
-                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setModalAbierto(false)}
-                    className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 text-xs font-black bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
-                  >
-                    {modoModal === 'editar' ? 'Guardar Cambios' : `Cargar en ${CAJAS_DEF.find(c => c.id === formCaja)?.nombre || 'Caja'}`}
-                  </button>
+                <div className="text-[11px] text-[#5A6B4A] font-bold mt-1">
+                  {formatARS(tramoMonto)}
                 </div>
+              </div>
 
-              </form>
-            )}
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Fecha de Recepción</label>
+                <input
+                  type="date"
+                  value={tramoFecha}
+                  onChange={(e) => setTramoFecha(e.target.value)}
+                  className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE] font-bold"
+                />
+              </div>
 
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Aportante / Quién lo entregó</label>
+                <input
+                  type="text"
+                  value={tramoEntregadoPor}
+                  onChange={(e) => setTramoEntregadoPor(e.target.value)}
+                  className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Ingresar en Cuenta / Caja</label>
+                <select
+                  value={tramoCajaDestino}
+                  onChange={(e) => setTramoCajaDestino(e.target.value)}
+                  className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE] font-bold"
+                >
+                  {CAJAS_DEF.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </select>
+                <span className="text-[10px] text-slate-500 mt-1 block">
+                  Impacta automáticamente como ingreso en la caja seleccionada bajo "Financiamiento → Préstamo familiar".
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Notas / Observación</label>
+                <input
+                  type="text"
+                  placeholder="Detalles sobre el acuerdo de devolución o recibo..."
+                  value={tramoNotas}
+                  onChange={(e) => setTramoNotas(e.target.value)}
+                  className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#E3DCCE]">
+                <button
+                  type="button"
+                  onClick={() => setModalTramoAbierto(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200/50 rounded-xl"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] text-xs font-bold rounded-xl border border-[#C6A96A] shadow-md transition-all cursor-pointer"
+                >
+                  Registrar Tramo
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MODAL: EDITAR DATOS DE PROVEEDOR (PUNTO 10)
+         ===================================================================== */}
+      {modalProveedor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto animate-fadeIn font-['Montserrat']">
+          <div className="relative w-full max-w-sm bg-[#F6F3E9] rounded-3xl shadow-2xl border border-[#C6A96A]/60 p-6 my-8 text-slate-800">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E3DCCE] mb-4">
+              <h3 className="font-bold text-base text-[#2F3A2A] font-serif">
+                Proveedor: {modalProveedor.nombre}
+              </h3>
+              <button onClick={() => setModalProveedor(null)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-full">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleGuardarDatosProveedor} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Teléfono / WhatsApp</label>
+                <input
+                  type="text"
+                  placeholder="Ej: 2604-123456"
+                  value={provTel}
+                  onChange={(e) => setProvTel(e.target.value)}
+                  className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE] font-mono text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Notas de Servicio / Condiciones</label>
+                <textarea
+                  rows="3"
+                  placeholder="Horarios de entrega, persona de contacto, descuentos..."
+                  value={provNotas}
+                  onChange={(e) => setProvNotas(e.target.value)}
+                  className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#E3DCCE]">
+                <button
+                  type="button"
+                  onClick={() => setModalProveedor(null)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 rounded-xl"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] text-xs font-bold rounded-xl border border-[#C6A96A]"
+                >
+                  Guardar Datos
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

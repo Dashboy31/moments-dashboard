@@ -8,6 +8,8 @@ import CajaView from './components/CajaView';
 import CalendarioView from './components/CalendarioView';
 import ChecklistView from './components/ChecklistView';
 import MarketingView from './components/MarketingView';
+import ConfiguracionView from './components/ConfiguracionView';
+import CargaRapidaModal from './components/CargaRapidaModal';
 import MomentsLogo from './components/MomentsLogo';
 
 import { 
@@ -75,6 +77,15 @@ export default function App() {
   const [checklist, setChecklist] = useState(CHECKLIST_INICIAL);
   const [conexion, setConexion] = useState('cargando'); // 'cargando' | 'ok' | 'error'
 
+  // Colecciones protegidas para gerencia (servidas solo con PIN)
+  const [eventosFinanzas, setEventosFinanzas] = useState([]);
+  const [configuracion, setConfiguracion] = useState(null);
+  const [prestamosTramos, setPrestamosTramos] = useState([]);
+  const [proveedoresDatos, setProveedoresDatos] = useState([]);
+
+  // Modal de carga rápida para todo el equipo sin PIN
+  const [cargaRapidaOpen, setCargaRapidaOpen] = useState(false);
+
   // Evento activo de hoy para el checklist y el banner en vivo
   const [eventoActivoId, setEventoActivoId] = useState(() => {
     const e = EVENTOS_SEED.find(e => e.esEventoDelDia) || EVENTOS_SEED[0];
@@ -108,7 +119,8 @@ export default function App() {
         versionRef.current = data.version;
       }
       if (cajaPin) {
-        const rm = await fetch('/api/movimientos', { headers: { 'x-caja-pin': cajaPin }, cache: 'no-store' });
+        const headers = { 'x-caja-pin': cajaPin };
+        const rm = await fetch('/api/movimientos', { headers, cache: 'no-store' });
         if (rm.status === 401) {
           sessionStorage.removeItem('moments_caja_pin');
           setCajaPin('');
@@ -116,6 +128,38 @@ export default function App() {
           const dm = await rm.json();
           setMovimientos(dm.movimientos || []);
         }
+
+        try {
+          const rf = await fetch('/api/eventos_finanzas', { headers, cache: 'no-store' });
+          if (rf.ok && guardadosPendientes.current === 0) {
+            const df = await rf.json();
+            setEventosFinanzas(df.eventos_finanzas || []);
+          }
+        } catch (e) {}
+
+        try {
+          const rc = await fetch('/api/configuracion', { headers, cache: 'no-store' });
+          if (rc.ok && guardadosPendientes.current === 0) {
+            const dc = await rc.json();
+            setConfiguracion(dc.configuracion || null);
+          }
+        } catch (e) {}
+
+        try {
+          const rp = await fetch('/api/prestamos_tramos', { headers, cache: 'no-store' });
+          if (rp.ok && guardadosPendientes.current === 0) {
+            const dp = await rp.json();
+            setPrestamosTramos(dp.prestamos_tramos || []);
+          }
+        } catch (e) {}
+
+        try {
+          const rprov = await fetch('/api/proveedores_datos', { headers, cache: 'no-store' });
+          if (rprov.ok && guardadosPendientes.current === 0) {
+            const dprov = await rprov.json();
+            setProveedoresDatos(dprov.proveedores_datos || []);
+          }
+        } catch (e) {}
       }
       setConexion('ok');
     } catch (e) {
@@ -149,7 +193,9 @@ export default function App() {
     guardadosPendientes.current += 1;
     try {
       const headers = { 'Content-Type': 'application/json' };
-      if (coleccion === 'movimientos') headers['x-caja-pin'] = cajaPin;
+      if (['movimientos', 'eventos_finanzas', 'configuracion', 'prestamos_tramos', 'proveedores_datos'].includes(coleccion)) {
+        headers['x-caja-pin'] = cajaPin;
+      }
       const res = await fetch(`/api/${coleccion}/${encodeURIComponent(id ?? item?.id)}`, {
         method: metodo,
         headers,
@@ -284,8 +330,12 @@ export default function App() {
   const handleBloquearCaja = () => {
     setCajaPin('');
     setMovimientos([]);
+    setEventosFinanzas([]);
+    setConfiguracion(null);
+    setPrestamosTramos([]);
+    setProveedoresDatos([]);
     sessionStorage.removeItem('moments_caja_pin');
-    if (activeTab === 'caja') {
+    if (activeTab === 'caja' || activeTab === 'configuracion') {
       setActiveTab('semana');
     }
   };
@@ -306,16 +356,92 @@ export default function App() {
   };
 
   // -------------------------------------------------------------------------
-  // Handlers para Calendario
+  // Handlers para Calendario y Ficha Económica
   // -------------------------------------------------------------------------
   const handleAgregarEvento = (nuevo) => {
     setEventos(prev => [...prev, nuevo]);
     guardarRegistro('eventos', 'PUT', nuevo);
   };
 
+  const handleEditarEvento = (eventoActualizado) => {
+    setEventos(prev => prev.map(e => e.id === eventoActualizado.id ? eventoActualizado : e));
+    guardarRegistro('eventos', 'PUT', eventoActualizado);
+  };
+
   const handleEliminarEvento = (id) => {
     setEventos(prev => prev.filter(e => e.id !== id));
     guardarRegistro('eventos', 'DELETE', null, id);
+  };
+
+  const handleGuardarFinanzasEvento = (finanzasActualizadas) => {
+    setEventosFinanzas(prev => {
+      const existe = prev.some(f => String(f.eventoId) === String(finanzasActualizadas.eventoId));
+      if (existe) {
+        return prev.map(f => String(f.eventoId) === String(finanzasActualizadas.eventoId) ? finanzasActualizadas : f);
+      }
+      return [...prev, finanzasActualizadas];
+    });
+    guardarRegistro('eventos_finanzas', 'PUT', finanzasActualizadas, finanzasActualizadas.eventoId || finanzasActualizadas.id);
+  };
+
+  // -------------------------------------------------------------------------
+  // Handlers para Configuración, Préstamos y Proveedores
+  // -------------------------------------------------------------------------
+  const handleGuardarConfiguracion = async (nuevaConfig) => {
+    setConfiguracion(nuevaConfig);
+    try {
+      const res = await fetch('/api/configuracion', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-caja-pin': cajaPin
+        },
+        body: JSON.stringify(nuevaConfig)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        versionRef.current = data.version;
+      }
+    } catch (e) {
+      console.error('Error al guardar configuración:', e);
+    }
+  };
+
+  const handleRegistrarTramoPrestamo = async (tramo) => {
+    setPrestamosTramos(prev => [tramo, ...prev]);
+    try {
+      const res = await fetch('/api/prestamos_tramos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-caja-pin': cajaPin
+        },
+        body: JSON.stringify(tramo)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        versionRef.current = data.version;
+        cargarDatos();
+      }
+    } catch (e) {
+      console.error('Error al registrar tramo de préstamo:', e);
+    }
+  };
+
+  const handleEliminarTramoPrestamo = (id) => {
+    setPrestamosTramos(prev => prev.filter(t => t.id !== id));
+    guardarRegistro('prestamos_tramos', 'DELETE', null, id);
+  };
+
+  const handleGuardarProveedorDatos = (prov) => {
+    setProveedoresDatos(prev => {
+      const existe = prev.some(p => p.id === prov.id || p.nombre?.toLowerCase() === prov.nombre?.toLowerCase());
+      if (existe) {
+        return prev.map(p => (p.id === prov.id || p.nombre?.toLowerCase() === prov.nombre?.toLowerCase()) ? prov : p);
+      }
+      return [...prev, prov];
+    });
+    guardarRegistro('proveedores_datos', 'PUT', prov);
   };
 
   // -------------------------------------------------------------------------
@@ -445,6 +571,11 @@ export default function App() {
               onIrACaja={handleOpenPinModal}
               onIrAChecklist={() => setActiveTab('checklist')}
               eventoDelDia={eventoActivo}
+              eventos={eventos}
+              movimientos={movimientos}
+              configuracion={configuracion}
+              cajaDesbloqueada={cajaDesbloqueada}
+              prestamosTramos={prestamosTramos}
             />
           )}
 
@@ -457,6 +588,14 @@ export default function App() {
                 onEditarMovimiento={handleEditarMovimiento}
                 onEliminarMovimiento={handleEliminarMovimiento}
                 usuarioActivo={usuarioActivo}
+                eventos={eventos}
+                configuracion={configuracion}
+                onGuardarConfiguracion={handleGuardarConfiguracion}
+                prestamosTramos={prestamosTramos}
+                onRegistrarTramoPrestamo={handleRegistrarTramoPrestamo}
+                onEliminarTramoPrestamo={handleEliminarTramoPrestamo}
+                proveedoresDatos={proveedoresDatos}
+                onGuardarProveedorDatos={handleGuardarProveedorDatos}
               />
             ) : (
               <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-10 text-center max-w-md mx-auto shadow-2xl border border-[#C6A96A]/40">
@@ -471,7 +610,7 @@ export default function App() {
                   onClick={handleOpenPinModal}
                   className="px-6 py-2.5 bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] text-xs font-black rounded-2xl shadow-lg border border-[#C6A96A] transition-all active:scale-95 cursor-pointer font-['Montserrat']"
                 >
-                  Ingresar PIN de Gerencia (1234)
+                  Ingresar PIN de Gerencia
                 </button>
               </div>
             )
@@ -482,8 +621,14 @@ export default function App() {
             <CalendarioView
               eventos={eventos}
               onAgregarEvento={handleAgregarEvento}
+              onEditarEvento={handleEditarEvento}
               onEliminarEvento={handleEliminarEvento}
               usuarioActivo={usuarioActivo}
+              cajaDesbloqueada={cajaDesbloqueada}
+              movimientos={movimientos}
+              eventosFinanzas={eventosFinanzas}
+              onGuardarFinanzasEvento={handleGuardarFinanzasEvento}
+              configuracion={configuracion}
             />
           )}
 
@@ -505,6 +650,33 @@ export default function App() {
             <MarketingView
               usuarioActivo={usuarioActivo}
             />
+          )}
+
+          {/* 6. Pestaña Configuración Gerencial (Protegida) */}
+          {activeTab === 'configuracion' && (
+            cajaDesbloqueada ? (
+              <ConfiguracionView
+                configuracion={configuracion}
+                onGuardarConfiguracion={handleGuardarConfiguracion}
+                usuarioActivo={usuarioActivo}
+              />
+            ) : (
+              <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-10 text-center max-w-md mx-auto shadow-2xl border border-[#C6A96A]/40">
+                <div className="w-16 h-16 bg-[#2F3A2A]/10 text-[#2F3A2A] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#C6A96A]/30">
+                  <Lock className="w-8 h-8 text-[#C6A96A]" />
+                </div>
+                <h2 className="text-xl font-black text-slate-900 font-['Playfair_Display']">Configuración Gerencial Protegida</h2>
+                <p className="text-xs text-slate-500 mt-1 mb-5">
+                  Ingresá el PIN de seguridad de Gerencia para modificar costos base, tarifas y parámetros del salón.
+                </p>
+                <button
+                  onClick={handleOpenPinModal}
+                  className="px-6 py-2.5 bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] text-xs font-black rounded-2xl shadow-lg border border-[#C6A96A] transition-all active:scale-95 cursor-pointer font-['Montserrat']"
+                >
+                  Ingresar PIN de Gerencia
+                </button>
+              </div>
+            )
           )}
 
         </main>
@@ -549,6 +721,32 @@ export default function App() {
         </footer>
 
       </div>
+
+      {/* Botón flotante accesible para TODO el equipo (+ Gasto / Ingreso) */}
+      <button
+        onClick={() => setCargaRapidaOpen(true)}
+        className="fixed bottom-6 right-6 z-40 px-4 py-3 bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] rounded-2xl shadow-2xl border-2 border-[#C6A96A] flex items-center gap-2 font-black text-xs font-['Montserrat'] tracking-wide transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
+        title="Cargar gasto o ingreso rápido sin PIN"
+      >
+        <div className="w-5 h-5 rounded-full bg-[#C6A96A] text-[#1C251B] flex items-center justify-center font-black text-sm">
+          +
+        </div>
+        <span>Gasto / Ingreso</span>
+      </button>
+
+      {/* Modal de Carga Rápida */}
+      <CargaRapidaModal
+        isOpen={cargaRapidaOpen}
+        onClose={() => setCargaRapidaOpen(false)}
+        eventos={eventos}
+        usuarioActivo={usuarioActivo}
+        onMovimientoGuardado={(nuevoMov) => {
+          if (cajaDesbloqueada) {
+            setMovimientos(prev => [nuevoMov, ...prev]);
+          }
+        }}
+        proveedoresSugeridos={proveedoresDatos.map(p => p.nombre).filter(Boolean)}
+      />
 
       {/* Modal para ingresar el PIN de la Caja */}
       <PinModal

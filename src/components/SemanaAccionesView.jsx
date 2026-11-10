@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Users, 
   UserCheck, 
@@ -19,7 +19,12 @@ import {
   X,
   Trash2,
   AlertTriangle,
-  Wallet
+  Wallet,
+  ShieldAlert,
+  Bell,
+  HelpCircle,
+  Building,
+  Hourglass
 } from 'lucide-react';
 import { USUARIOS } from '../utils/mockData';
 
@@ -32,7 +37,12 @@ export default function SemanaAccionesView({
   usuarioActivo,
   onIrACaja,
   onIrAChecklist,
-  eventoDelDia
+  eventoDelDia,
+  eventos = [],
+  movimientos = [],
+  configuracion,
+  cajaDesbloqueada = false,
+  prestamosTramos = []
 }) {
   const [filtroTipo, setFiltroTipo] = useState('todas'); // 'todas' | 'reunion' | 'pago_proveedor' | 'tarea_operativa' | 'mis_pendientes'
   const [modalNuevoOpen, setModalNuevoOpen] = useState(false);
@@ -61,6 +71,137 @@ export default function SemanaAccionesView({
       maximumFractionDigits: 0
     }).format(Number(monto) || 0);
   };
+
+
+  // -------------------------------------------------------------------------
+  // Métricas para el Panel "Pendientes" (Punto 9 de la especificación)
+  // -------------------------------------------------------------------------
+  const esGerencia = Boolean(
+    cajaDesbloqueada ||
+    usuarioActivo?.id === 'jesica' ||
+    usuarioActivo?.id === 'leandro' ||
+    String(usuarioActivo?.rol || '').toLowerCase().includes('gerencia') ||
+    String(usuarioActivo?.rol || '').toLowerCase().includes('dueño')
+  );
+
+  const hoyStr = new Date().toISOString().slice(0, 10);
+  const hoyMas30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  // 1. Eventos ya realizados sin gastos cargados
+  const eventosSinGastos = useMemo(() => {
+    return (eventos || []).filter(e => {
+      if (e.tipo === 'mantenimiento') return false;
+      if (e.fecha >= hoyStr) return false;
+      const tieneGasto = (movimientos || []).some(m => {
+        if (m.tipo !== 'egreso') return false;
+        if (m.eventoId && String(m.eventoId) === String(e.id)) return true;
+        if (e.cliente && e.cliente !== 'A definir' && String(m.concepto || '').toLowerCase().includes(e.cliente.toLowerCase())) return true;
+        return false;
+      });
+      return !tieneGasto;
+    });
+  }, [eventos, movimientos, hoyStr]);
+
+  // 2. Eventos próximos (30 días) sin seña registrada
+  const eventosSinSena = useMemo(() => {
+    return (eventos || []).filter(e => {
+      if (e.tipo === 'mantenimiento') return false;
+      if (e.fecha < hoyStr || e.fecha > hoyMas30) return false;
+      const tieneSena = (movimientos || []).some(m => {
+        if (m.tipo !== 'ingreso') return false;
+        if (m.eventoId && String(m.eventoId) === String(e.id)) return true;
+        if (e.cliente && e.cliente !== 'A definir' && String(m.concepto || '').toLowerCase().includes(e.cliente.toLowerCase())) return true;
+        return false;
+      });
+      return !tieneSena;
+    });
+  }, [eventos, movimientos, hoyStr, hoyMas30]);
+
+  // 3. Fijos vencidos o pendientes del mes con responsable
+  const fijosPendientesOVencidos = useMemo(() => {
+    const plantilla = configuracion?.plantillaCostosFijos || [
+      { subcategoria: 'Alquiler', concepto: 'Alquiler salón e instalaciones', diaVencimiento: 10, responsable: 'Gabriela' },
+      { subcategoria: 'Luz', concepto: 'Servicio de Electricidad (Edemsa)', diaVencimiento: 15, responsable: 'Paulina' },
+      { subcategoria: 'Gas', concepto: 'Gas Natural / Envasado', diaVencimiento: 18, responsable: 'Paulina' },
+      { subcategoria: 'Agua / Municipalidad', concepto: 'Tasas municipales y agua potable', diaVencimiento: 20, responsable: 'Pablo' },
+      { subcategoria: 'Internet / Telefonía', concepto: 'Fibra óptica salón y administración', diaVencimiento: 12, responsable: 'Gabriela' },
+      { subcategoria: 'Seguro', concepto: 'Póliza integral de comercio y responsabilidad civil', diaVencimiento: 5, responsable: 'Gabriela' },
+      { subcategoria: 'Monotributo / Contador', concepto: 'Honorarios contables y monotributo', diaVencimiento: 20, responsable: 'Jesica' },
+      { subcategoria: 'Software / Sistemas', concepto: 'Hosting, dominio y licencias', diaVencimiento: 1, responsable: 'Joaquina' }
+    ];
+    const diaHoy = new Date().getDate();
+    const mesActual = hoyStr.slice(0, 7);
+
+    return plantilla.map(f => {
+      const pagado = (movimientos || []).some(m => {
+        if (!m.fecha || !m.fecha.startsWith(mesActual) || m.tipo !== 'egreso') return false;
+        const sub = String(m.subcategoria || '').toLowerCase();
+        const conc = String(m.concepto || '').toLowerCase();
+        return sub.includes(f.subcategoria.toLowerCase()) || conc.includes(f.subcategoria.toLowerCase());
+      });
+      const vencido = !pagado && diaHoy > (f.diaVencimiento || 10);
+      return {
+        ...f,
+        pagado,
+        vencido,
+        estado: pagado ? 'Pagado' : (vencido ? 'Vencido' : 'Pendiente')
+      };
+    }).filter(f => !f.pagado);
+  }, [configuracion, movimientos, hoyStr]);
+
+  // 4. Eventos a_definir para completar
+  const eventosADefinir = useMemo(() => {
+    return (eventos || []).filter(e => e.tipo === 'a_definir');
+  }, [eventos]);
+
+  // 5. Días desde la última carga de cada responsable
+  const actividadResponsables = useMemo(() => {
+    const lista = ['Gabriela', 'Paulina', 'Pablo', 'Jesica', 'Joaquina'];
+    const ahoraMs = Date.now();
+
+    return lista.map(nombre => {
+      let ultimaFechaStr = null;
+      (movimientos || []).forEach(m => {
+        const por = String(m.cargadoPor || m.cargo || '');
+        if (por.toLowerCase().includes(nombre.toLowerCase())) {
+          if (!ultimaFechaStr || m.fecha > ultimaFechaStr) {
+            ultimaFechaStr = m.fecha;
+          }
+        }
+      });
+
+      let dias = null;
+      if (ultimaFechaStr) {
+        const diffMs = ahoraMs - new Date(ultimaFechaStr + 'T12:00:00').getTime();
+        dias = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+      }
+
+      return {
+        nombre,
+        dias,
+        alerta: dias === null || dias > 7
+      };
+    });
+  }, [movimientos]);
+
+  // 6. Alerta tramo préstamo del simulador
+  const alertaTramoSimulador = useMemo(() => {
+    const costoPromedio = Number(configuracion?.costoPromedioEvento) || 10000000;
+    const colchon = Number(configuracion?.colchonSeguridad) || 1;
+    const totalCajas = (movimientos || []).reduce((acc, m) => {
+      const val = Number(m.monto) || 0;
+      return m.tipo === 'ingreso' ? acc + val : acc - val;
+    }, 0);
+    const eventosFuturos = (eventos || []).filter(e => e.fecha >= hoyStr && e.tipo !== 'mantenimiento');
+    const eventosCubiertos = costoPromedio > 0 ? Math.floor(Math.max(0, totalCajas) / costoPromedio) : 0;
+    const necesitaPedir = eventosCubiertos <= colchon && eventosFuturos.length > 0;
+    return {
+      necesitaPedir,
+      eventosCubiertos,
+      colchon,
+      totalCajas
+    };
+  }, [configuracion, movimientos, eventos, hoyStr]);
 
   // -------------------------------------------------------------------------
   // Métricas para las tarjetas KPI superiores (Estilo MIFA)
@@ -316,6 +457,224 @@ export default function SemanaAccionesView({
             <span>👑 Salón + Pista</span>
           </div>
         </div>
+
+      </div>
+
+
+      {/* =====================================================================
+          PANEL "PENDIENTES" EN EL INICIO (Punto 9 de la especificación)
+         ===================================================================== */}
+      <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-[#C6A96A]/40 p-5 shadow-sm space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E3DCCE] pb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-black">
+              <Bell className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider font-['Montserrat']">
+                Panel de Pendientes y Atención Inmediata
+              </h2>
+              <p className="text-xs text-slate-500 font-medium">
+                {esGerencia 
+                  ? 'Alertas de cobranzas, costos, fijos por vencer y ritmo de carga de la gerencia'
+                  : 'Tus actividades clave de la semana que requieren confirmación o ejecución'}
+              </p>
+            </div>
+          </div>
+          {esGerencia && onIrACaja && (
+            <button
+              onClick={onIrACaja}
+              className="text-xs font-bold text-[#5A6B4A] hover:text-[#2F3A2A] flex items-center gap-1 hover:underline"
+            >
+              <span>Ver en Caja</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* ALERTA SIMULADOR: Si el saldo cubre <= colchón de seguridad */}
+        {esGerencia && alertaTramoSimulador.necesitaPedir && (
+          <div className="p-3.5 rounded-2xl bg-amber-500/15 border-2 border-amber-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-2.5">
+              <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <div className="text-xs font-black uppercase tracking-wider text-amber-900">
+                  Alerta Financiera · Pedir Próximo Tramo de Préstamo
+                </div>
+                <div className="text-xs text-amber-800 font-medium">
+                  El saldo actual ({formatARS(alertaTramoSimulador.totalCajas)}) cubre solo{' '}
+                  <strong>{alertaTramoSimulador.eventosCubiertos} evento(s)</strong> (colchón de seguridad:{' '}
+                  {alertaTramoSimulador.colchon}). Solicitá el próximo tramo del préstamo familiar.
+                </div>
+              </div>
+            </div>
+            {onIrACaja && (
+              <button
+                onClick={onIrACaja}
+                className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 transition shadow-sm"
+              >
+                Abrir Simulador
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* VISTA SEGÚN ROL: GERENCIA VS EQUIPO */}
+        {esGerencia ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            
+            {/* 1. Eventos pasados sin gastos */}
+            <div className="p-3.5 rounded-2xl bg-rose-50/70 border border-rose-200 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-rose-900 uppercase text-[10px]">Costos Faltantes</span>
+                  <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${eventosSinGastos.length > 0 ? 'bg-rose-200 text-rose-900' : 'bg-slate-200 text-slate-800'}`}>
+                    {eventosSinGastos.length} pendientes
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 mb-2">
+                  Eventos pasados sin ningún gasto registrado en la caja.
+                </p>
+              </div>
+              <div className="space-y-1 mt-1">
+                {eventosSinGastos.slice(0, 2).map(e => (
+                  <div key={e.id} className="text-[11px] font-semibold text-rose-950 truncate">
+                    • {e.titulo || e.cliente} ({e.fecha})
+                  </div>
+                ))}
+                {eventosSinGastos.length === 0 && (
+                  <span className="text-[11px] font-bold text-emerald-700">✓ Todos los costos al día</span>
+                )}
+              </div>
+            </div>
+
+            {/* 2. Próximos 30 días sin seña */}
+            <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-amber-900 uppercase text-[10px]">Señas Pendientes</span>
+                  <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${eventosSinSena.length > 0 ? 'bg-amber-200 text-amber-900' : 'bg-slate-200 text-slate-800'}`}>
+                    {eventosSinSena.length} próximos
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 mb-2">
+                  Eventos de los próximos 30 días sin ingreso de seña registrado.
+                </p>
+              </div>
+              <div className="space-y-1 mt-1">
+                {eventosSinSena.slice(0, 2).map(e => (
+                  <div key={e.id} className="text-[11px] font-semibold text-amber-950 truncate">
+                    • {e.titulo || e.cliente} ({e.fecha})
+                  </div>
+                ))}
+                {eventosSinSena.length === 0 && (
+                  <span className="text-[11px] font-bold text-emerald-700">✓ Todas las señas registradas</span>
+                )}
+              </div>
+            </div>
+
+            {/* 3. Costos fijos del mes */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-slate-800 uppercase text-[10px]">Fijos del Mes</span>
+                  <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${fijosPendientesOVencidos.some(f => f.vencido) ? 'bg-rose-200 text-rose-900' : 'bg-slate-200 text-slate-800'}`}>
+                    {fijosPendientesOVencidos.length} pendientes
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 mb-2">
+                  Impuestos y servicios mensuales sin registrar pago este mes.
+                </p>
+              </div>
+              <div className="space-y-1 mt-1">
+                {fijosPendientesOVencidos.slice(0, 2).map((f, i) => (
+                  <div key={i} className="text-[11px] font-semibold text-slate-700 truncate">
+                    • {f.concepto} ({f.responsable}) {f.vencido ? '⚠️' : '⏳'}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 4. Eventos a_definir */}
+            <div className="p-3.5 rounded-2xl bg-cyan-50/70 border border-cyan-200 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-cyan-950 uppercase text-[10px]">Por Completar</span>
+                  <span className="px-2 py-0.5 rounded-full font-bold text-[10px] bg-cyan-200 text-cyan-950">
+                    {eventosADefinir.length} eventos
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 mb-2">
+                  Fechas precargadas de la planilla pendientes de tipo y cantidad de personas.
+                </p>
+              </div>
+              <div className="text-[11px] text-cyan-900 font-bold mt-1">
+                Revisar en calendario de Noviembre / Diciembre
+              </div>
+            </div>
+
+          </div>
+        ) : (
+          /* VISTA PENDIENTES DEL EQUIPO (SIN NÚMEROS ECONÓMICOS) */
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+              <span className="font-bold text-slate-800 block mb-1">Mis Reuniones Pendientes</span>
+              <div className="text-xl font-bold text-[#2F3A2A] mb-1">
+                {misReunionesPendientes.length}
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Reuniones de coordinación asignadas que requieren tu confirmación.
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+              <span className="font-bold text-slate-800 block mb-1">Mis Tareas Operativas</span>
+              <div className="text-xl font-bold text-[#2F3A2A] mb-1">
+                {tareas.filter(t => !t.completada && (t.responsable === usuarioActivo?.nombre || t.creadorId === usuarioActivo?.id)).length}
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Puesta a punto y logística asignada a tu cargo para esta semana.
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+              <span className="font-bold text-slate-800 block mb-1">Próximo Evento a Coordinar</span>
+              <div className="text-sm font-bold text-[#5A6B4A] mb-1 truncate">
+                {eventoDelDia ? eventoDelDia.titulo : 'Sin evento asignado'}
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Consultá el checklist de logística en vivo durante la jornada.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* 5. Días desde la última carga por responsable (Solo Gerencia) */}
+        {esGerencia && (
+          <div className="pt-3 border-t border-[#E3DCCE] flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span className="font-bold text-slate-600 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-[#5A6B4A]" />
+              <span>Actividad y días desde última carga:</span>
+            </span>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {actividadResponsables.map(r => (
+                <span 
+                  key={r.nombre}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl font-bold text-[11px] border ${
+                    r.dias === null ? 'bg-slate-100 text-slate-400 border-slate-200' :
+                    r.dias <= 2 ? 'bg-emerald-50 text-emerald-800 border-emerald-200' :
+                    r.dias <= 7 ? 'bg-amber-50 text-amber-800 border-amber-200' :
+                    'bg-rose-50 text-rose-800 border-rose-200'
+                  }`}
+                >
+                  <span>{r.nombre}:</span>
+                  <strong>{r.dias !== null ? `${r.dias}d` : 'Sin cargas'}</strong>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
       </div>
 
