@@ -1085,6 +1085,9 @@ ${calcOpcionDulce !== 'ninguno' ? `• Opcional contratado (${calcOpcionDulce ==
                     >
                       @moments.tu.lugar
                     </a>
+                    <span className="text-[10px] bg-teal-100 text-teal-900 border border-teal-300 px-2 py-0.5 rounded-full font-bold">
+                      CM: Moni
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-2 text-slate-700">

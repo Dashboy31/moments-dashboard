@@ -436,7 +436,7 @@ export default function ManualView({
                     ¿Dónde está y quién lo puede usar?
                   </h4>
                   <p className="text-[11px] text-blue-900">
-                    Está siempre visible en la <strong>esquina inferior derecha</strong> de todas las pantallas con el texto <strong>+ Gasto / Ingreso</strong>. Lo puede usar cualquier miembro del equipo (Paulina, Gabriela, Pablo, etc.) desde su celular o la computadora sin necesidad de pedir el PIN de gerencia.
+                    Está siempre visible en la <strong>esquina inferior derecha</strong> de todas las pantallas con el texto <strong>+ Gasto / Ingreso</strong>. Lo puede usar cualquier miembro del equipo (Paulina, Gabriela, Pablo, Moni, etc.) desde su celular o la computadora sin necesidad de pedir el PIN de gerencia.
                   </p>
                 </div>
 

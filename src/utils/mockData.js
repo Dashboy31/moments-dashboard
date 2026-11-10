@@ -7,7 +7,8 @@ export const USUARIOS = [
   { id: 'gabriela', nombre: 'Gabriela', rol: 'Administración', badge: 'Administración', color: 'bg-sky-100 text-sky-900 border-sky-300', avatar_color: '#0284c7', password: '123' },
   { id: 'pablo', nombre: 'Pablo', rol: 'Ventas y Mantenimiento', badge: 'Ventas / Mant.', color: 'bg-emerald-100 text-emerald-900 border-emerald-300', avatar_color: '#059669', password: '123' },
   { id: 'joaquina', nombre: 'Joaquina', rol: 'Ventas', badge: 'Ventas', color: 'bg-rose-100 text-rose-900 border-rose-300', avatar_color: '#e11d48', password: '123' },
-  { id: 'paulina', nombre: 'Paulina', rol: 'Logística de Eventos', badge: 'Logística', color: 'bg-fuchsia-100 text-fuchsia-900 border-fuchsia-300', avatar_color: '#a21caf', password: '123' }
+  { id: 'paulina', nombre: 'Paulina', rol: 'Logística de Eventos', badge: 'Logística', color: 'bg-fuchsia-100 text-fuchsia-900 border-fuchsia-300', avatar_color: '#a21caf', password: '123' },
+  { id: 'moni', nombre: 'Moni', rol: 'Community Manager', badge: 'CM / Redes', color: 'bg-teal-100 text-teal-900 border-teal-300', avatar_color: '#0d9488', password: '123' }
 ];
 
 export const CAJAS_LISTA = [

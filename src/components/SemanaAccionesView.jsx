@@ -159,7 +159,7 @@ export default function SemanaAccionesView({
 
   // 5. Días desde la última carga de cada responsable
   const actividadResponsables = useMemo(() => {
-    const lista = ['Gabriela', 'Paulina', 'Pablo', 'Jesica', 'Joaquina'];
+    const lista = ['Gabriela', 'Paulina', 'Pablo', 'Jesica', 'Joaquina', 'Moni'];
     const ahoraMs = Date.now();
 
     return lista.map(nombre => {
