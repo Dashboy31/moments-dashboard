@@ -53,7 +53,7 @@ export const CAJAS_LISTA = [
   }
 ];
 
-export const CATEGORIAS_CAJA = {
+export const CATEGORIAS_EGRESO = {
   'Variables – Insumos': [
     'Carnes',
     'Verduras',
@@ -99,12 +99,93 @@ export const CATEGORIAS_CAJA = {
   ]
 };
 
+export const CATEGORIAS_INGRESO = {
+  'Cumpleaños de 15': [
+    'Seña',
+    'Cuota',
+    'Saldo final',
+    'Pago total',
+    'Transferencia',
+    'Efectivo',
+    'Mercado Pago'
+  ],
+  'Casamiento': [
+    'Seña',
+    'Cuota',
+    'Saldo final',
+    'Pago total',
+    'Transferencia',
+    'Efectivo',
+    'Mercado Pago'
+  ],
+  'Fiesta de egresados': [
+    'Seña',
+    'Cuota',
+    'Saldo final',
+    'Pago total',
+    'Transferencia',
+    'Efectivo',
+    'Mercado Pago'
+  ],
+  'Cumple década / Aniversario': [
+    'Seña',
+    'Cuota',
+    'Saldo final',
+    'Pago total',
+    'Transferencia',
+    'Efectivo',
+    'Mercado Pago'
+  ],
+  'Tardeo / Préstamo de salón': [
+    'Seña',
+    'Alquiler de salón',
+    'Saldo final',
+    'Pago total',
+    'Transferencia',
+    'Efectivo'
+  ],
+  'Evento especial / Corporativo': [
+    'Seña',
+    'Cuota',
+    'Saldo final',
+    'Pago total',
+    'Transferencia',
+    'Efectivo',
+    'Cheque'
+  ],
+  'Préstamos': [
+    'Tramo recibido',
+    'Aporte familiar',
+    'Desembolso',
+    'Transferencia',
+    'Efectivo'
+  ],
+  'Otro ingreso': [
+    'Cobro adicional',
+    'Venta de barra/adicionales',
+    'Seña',
+    'Transferencia',
+    'Efectivo'
+  ]
+};
+
+export const CATEGORIAS_CAJA = CATEGORIAS_EGRESO;
+
 // Mapa de retrocompatibilidad para subcategorías cargadas históricamente
 export function normalizarCategoriaMovimiento(cat, subcat) {
   const s = String(subcat || '').trim();
   const c = String(cat || '').trim();
 
-  if (c.startsWith('Variables – ') || c === 'Financiamiento') {
+  // Si ya coincide con una categoría oficial de egreso o ingreso, preservar tal cual
+  if (
+    CATEGORIAS_INGRESO[c] ||
+    CATEGORIAS_EGRESO[c] ||
+    c.startsWith('Variables – ') ||
+    c === 'Financiamiento' ||
+    c === 'Fijos' ||
+    c === 'Retiros personales' ||
+    c === 'Otros / No recurrente'
+  ) {
     return { categoria: c, subcategoria: s };
   }
 

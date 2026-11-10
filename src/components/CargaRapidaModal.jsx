@@ -11,7 +11,13 @@ import {
   Store,
   Sparkles
 } from 'lucide-react';
-import { CATEGORIAS_CAJA, CAJAS_LISTA, formatARS } from '../utils/mockData';
+import { 
+  CATEGORIAS_CAJA, 
+  CATEGORIAS_EGRESO,
+  CATEGORIAS_INGRESO,
+  CAJAS_LISTA, 
+  formatARS 
+} from '../utils/mockData';
 
 export default function CargaRapidaModal({ 
   isOpen, 
@@ -39,9 +45,27 @@ export default function CargaRapidaModal({
 
   if (!isOpen) return null;
 
+  const handleCambiarTipo = (nuevoTipo) => {
+    setTipo(nuevoTipo);
+    if (nuevoTipo === 'ingreso') {
+      if (!CATEGORIAS_INGRESO[categoria]) {
+        const primerCat = Object.keys(CATEGORIAS_INGRESO)[0]; // 'Cumpleaños de 15'
+        setCategoria(primerCat);
+        setSubcategoria(CATEGORIAS_INGRESO[primerCat][0]); // 'Seña'
+      }
+    } else {
+      if (!CATEGORIAS_EGRESO[categoria]) {
+        const primerCat = Object.keys(CATEGORIAS_EGRESO)[0]; // 'Variables – Insumos'
+        setCategoria(primerCat);
+        setSubcategoria(CATEGORIAS_EGRESO[primerCat][0]); // 'Carnes'
+      }
+    }
+  };
+
   const handleCategoriaChange = (nuevaCat) => {
     setCategoria(nuevaCat);
-    const subcats = CATEGORIAS_CAJA[nuevaCat] || [];
+    const cats = tipo === 'ingreso' ? CATEGORIAS_INGRESO : CATEGORIAS_EGRESO;
+    const subcats = cats[nuevaCat] || [];
     setSubcategoria(subcats[0] || '');
   };
 
@@ -66,7 +90,7 @@ export default function CargaRapidaModal({
         concepto: concepto.trim() || `${tipo === 'ingreso' ? 'Ingreso' : 'Egreso'} de ${subcategoria}`,
         eventoId: eventoId || null,
         proveedor: proveedor.trim() || null,
-        origen: tipo === 'ingreso' ? origen : null,
+        origen: tipo === 'ingreso' ? (subcategoria || origen || 'Seña') : null,
         notas: notas.trim() || '',
         usuarioNombre: usuarioActivo?.nombre || 'Equipo Moments'
       };
@@ -145,7 +169,7 @@ export default function CargaRapidaModal({
             <div className="grid grid-cols-2 gap-2 bg-white/70 p-1.5 rounded-2xl border border-[#E3DCCE]">
               <button
                 type="button"
-                onClick={() => setTipo('egreso')}
+                onClick={() => handleCambiarTipo('egreso')}
                 className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                   tipo === 'egreso' 
                     ? 'bg-[#2F3A2A] text-[#F6F3E9] shadow-sm' 
@@ -156,7 +180,7 @@ export default function CargaRapidaModal({
               </button>
               <button
                 type="button"
-                onClick={() => setTipo('ingreso')}
+                onClick={() => handleCambiarTipo('ingreso')}
                 className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                   tipo === 'ingreso' 
                     ? 'bg-[#5A6B4A] text-[#F6F3E9] shadow-sm' 
@@ -203,18 +227,18 @@ export default function CargaRapidaModal({
               </div>
             </div>
 
-            {/* Categoría y Subcategoría */}
+            {/* Categoría y Subcategoría Dinámica */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Categoría
+                  {tipo === 'ingreso' ? 'Tipo de Evento / Origen' : 'Categoría del Gasto'}
                 </label>
                 <select
                   value={categoria}
                   onChange={(e) => handleCategoriaChange(e.target.value)}
                   className="w-full px-3 py-2 text-xs font-bold bg-white rounded-xl border border-[#E3DCCE] focus:outline-none focus:ring-2 focus:ring-[#C6A96A]/40"
                 >
-                  {Object.keys(CATEGORIAS_CAJA).map(cat => (
+                  {Object.keys(tipo === 'ingreso' ? CATEGORIAS_INGRESO : CATEGORIAS_EGRESO).map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
@@ -222,14 +246,14 @@ export default function CargaRapidaModal({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Subcategoría
+                  {tipo === 'ingreso' ? 'Modo de Pago / Concepto' : 'Subcategoría'}
                 </label>
                 <select
                   value={subcategoria}
                   onChange={(e) => setSubcategoria(e.target.value)}
                   className="w-full px-3 py-2 text-xs font-bold bg-white rounded-xl border border-[#E3DCCE] focus:outline-none focus:ring-2 focus:ring-[#C6A96A]/40"
                 >
-                  {(CATEGORIAS_CAJA[categoria] || []).map(sub => (
+                  {((tipo === 'ingreso' ? CATEGORIAS_INGRESO : CATEGORIAS_EGRESO)[categoria] || []).map(sub => (
                     <option key={sub} value={sub}>{sub}</option>
                   ))}
                 </select>
@@ -278,52 +302,42 @@ export default function CargaRapidaModal({
               </select>
             </div>
 
-            {/* Origen (Solo para Ingresos) */}
-            {tipo === 'ingreso' && (
+            {/* Proveedor (Solo Egreso) o Cliente (Solo Ingreso) */}
+            {tipo === 'egreso' ? (
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Tipo de Cobro / Origen
+                  Proveedor / Destinatario (Opcional)
                 </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {['Seña', 'Cuota', 'Saldo final', 'Otro'].map(orig => (
-                    <button
-                      key={orig}
-                      type="button"
-                      onClick={() => setOrigen(orig)}
-                      className={`py-1.5 px-2 text-xs font-bold rounded-xl border transition-all cursor-pointer text-center ${
-                        origen === orig
-                          ? 'bg-[#5A6B4A] text-white border-[#5A6B4A]'
-                          : 'bg-white text-slate-600 border-[#E3DCCE]'
-                      }`}
-                    >
-                      {orig}
-                    </button>
-                  ))}
+                <div className="relative">
+                  <input
+                    type="text"
+                    list="lista-proveedores"
+                    placeholder="Ej: Carnicería Don Juan, DJ Cuyo..."
+                    value={proveedor}
+                    onChange={(e) => setProveedor(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-white rounded-xl border border-[#E3DCCE] text-slate-800 focus:outline-none"
+                  />
+                  <datalist id="lista-proveedores">
+                    {proveedoresSugeridos.map((p, idx) => (
+                      <option key={idx} value={p} />
+                    ))}
+                  </datalist>
                 </div>
               </div>
-            )}
-
-            {/* Proveedor con autocompletado */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Proveedor / Destinatario (Opcional)
-              </label>
-              <div className="relative">
+            ) : (
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Cliente / Titular que abona (Opcional)
+                </label>
                 <input
                   type="text"
-                  list="lista-proveedores"
-                  placeholder="Ej: Carnicería Don Juan, DJ Cuyo..."
+                  placeholder="Ej: Familia Morales, Quinceañera Sofía, Empresa..."
                   value={proveedor}
                   onChange={(e) => setProveedor(e.target.value)}
                   className="w-full px-3 py-2 text-xs bg-white rounded-xl border border-[#E3DCCE] text-slate-800 focus:outline-none"
                 />
-                <datalist id="lista-proveedores">
-                  {proveedoresSugeridos.map((p, idx) => (
-                    <option key={idx} value={p} />
-                  ))}
-                </datalist>
               </div>
-            </div>
+            )}
 
             {/* Concepto y Notas Opcionales */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

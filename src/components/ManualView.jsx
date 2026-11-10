@@ -444,12 +444,20 @@ export default function ManualView({
                   <h4 className="font-bold text-slate-900 text-xs">Paso a paso para cargar un comprobante:</h4>
                   <ol className="list-decimal list-inside space-y-2 text-[11px] text-slate-700">
                     <li>Hacer clic en el botón flotante <strong>+ Gasto / Ingreso</strong>.</li>
-                    <li>Seleccionar si es <strong>Gasto (Egreso)</strong> o <strong>Ingreso</strong>.</li>
-                    <li>Elegir la <strong>Categoría</strong> (ej: <em>Variables – Insumos</em>) y la <strong>Subcategoría</strong> (ej: <em>Carnes, Bebida, Verduras</em>).</li>
-                    <li>Escribir el <strong>Concepto</strong> (ej: <em>"Compra 20 kg de vacío y asado para evento 15 de Camila"</em>).</li>
-                    <li>Ingresar el <strong>Monto</strong> en pesos.</li>
-                    <li>Seleccionar la <strong>Caja</strong> de la cual salió el dinero (Efectivo, Mercado Pago, Banco Nación o Naranja).</li>
-                    <li><em>Opcional pero recomendado:</em> Vincular al <strong>Evento</strong> correspondiente en el desplegable (muestra los eventos de ±30 días) y escribir el <strong>Proveedor</strong> (cuenta con autocompletado de los ya registrados).</li>
+                    <li>
+                      Seleccionar si es <strong>Gasto (Egreso)</strong> o <strong>Ingreso / Cobro</strong>:
+                      <ul className="list-disc list-inside ml-4 mt-1 space-y-1 text-slate-600">
+                        <li>
+                          <strong>Para Gasto:</strong> La <em>Categoría</em> es el rubro operativo (Insumos, Personal, Fijos) y la <em>Subcategoría</em> es el ítem puntual (Carnes, Mozos, Luz). Se indica el <em>Proveedor</em> a quien se le pagó.
+                        </li>
+                        <li>
+                          <strong>Para Ingreso:</strong> La <em>Categoría</em> es el tipo de evento o procedencia (Cumpleaños de 15, Casamiento, Egresados, Préstamos) y la <em>Subcategoría</em> es el modo o concepto del cobro (Seña, Cuota, Saldo final, Transferencia, Efectivo). Se eliminan divisiones de gastos y proveedores que no aplican a un cobro.
+                        </li>
+                      </ul>
+                    </li>
+                    <li>Escribir el <strong>Concepto</strong> (ej: <em>"Seña 15 de Camila"</em> o <em>"Compra 20 kg de vacío"</em>).</li>
+                    <li>Ingresar el <strong>Monto</strong> en pesos y seleccionar la <strong>Cuenta / Caja</strong> (Efectivo, Mercado Pago, Banco Nación o Naranja).</li>
+                    <li><em>Opcional:</em> Vincular al <strong>Evento</strong> correspondiente en el desplegable.</li>
                     <li>Pulsar <strong>"Guardar en Caja"</strong>. El sistema confirma la carga y deja el modal listo para anotar otro comprobante.</li>
                   </ol>
                 </div>

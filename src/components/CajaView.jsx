@@ -38,6 +38,8 @@ import {
 } from 'lucide-react';
 import { 
   CATEGORIAS_CAJA, 
+  CATEGORIAS_EGRESO,
+  CATEGORIAS_INGRESO,
   USUARIOS, 
   formatARS, 
   normalizarCategoriaMovimiento,
@@ -318,8 +320,8 @@ export default function CajaView({
     setFormFecha(new Date().toISOString().split('T')[0]);
     setFormConcepto('');
     setFormTipo('egreso');
-    setFormCategoria('Variables – Otros');
-    setFormSubcategoria('Proveedores de evento');
+    setFormCategoria('Variables – Insumos');
+    setFormSubcategoria('Carnes');
     setFormMonto('');
     setFormEventoId('');
     setFormOrigen('Seña');
@@ -329,19 +331,45 @@ export default function CajaView({
     setModalAbierto(true);
   };
 
+  const handleCambiarTipo = (nuevoTipo) => {
+    setFormTipo(nuevoTipo);
+    if (nuevoTipo === 'ingreso') {
+      if (!CATEGORIAS_INGRESO[formCategoria]) {
+        const primerCat = Object.keys(CATEGORIAS_INGRESO)[0]; // 'Cumpleaños de 15'
+        setFormCategoria(primerCat);
+        setFormSubcategoria(CATEGORIAS_INGRESO[primerCat][0]); // 'Seña'
+      }
+    } else {
+      if (!CATEGORIAS_EGRESO[formCategoria]) {
+        const primerCat = Object.keys(CATEGORIAS_EGRESO)[0]; // 'Variables – Insumos'
+        setFormCategoria(primerCat);
+        setFormSubcategoria(CATEGORIAS_EGRESO[primerCat][0]); // 'Carnes'
+      }
+    }
+  };
+
   const handleAbrirEditar = (m) => {
     setModoModal('editar');
     setMovimientoAEditar(m);
     setFormCaja(getCajaMovimiento(m));
     setFormFecha(m.fecha || new Date().toISOString().split('T')[0]);
     setFormConcepto(m.concepto || '');
-    setFormTipo(m.tipo || 'egreso');
-    const norm = normalizarCategoriaMovimiento(m.categoria, m.subcategoria);
-    setFormCategoria(norm.categoria);
-    setFormSubcategoria(norm.subcategoria);
+    const t = m.tipo || 'egreso';
+    setFormTipo(t);
+    if (t === 'ingreso') {
+      const cats = CATEGORIAS_INGRESO;
+      const catExiste = Boolean(cats[m.categoria]);
+      const catFinal = catExiste ? m.categoria : 'Cumpleaños de 15';
+      setFormCategoria(catFinal);
+      setFormSubcategoria(m.subcategoria || cats[catFinal][0] || 'Seña');
+    } else {
+      const norm = normalizarCategoriaMovimiento(m.categoria, m.subcategoria);
+      setFormCategoria(norm.categoria);
+      setFormSubcategoria(norm.subcategoria);
+    }
     setFormMonto(m.monto ? String(m.monto) : '');
     setFormEventoId(m.eventoId || '');
-    setFormOrigen(m.origen || 'Seña');
+    setFormOrigen(m.origen || m.subcategoria || 'Seña');
     setFormProveedor(m.proveedor || '');
     setFormCargo(m.cargo || (usuarioActivo?.nombre || 'Jesica'));
     setFormNotas(m.notas || '');
@@ -426,7 +454,7 @@ export default function CajaView({
       cargo: formCargo,
       cargadoPor: modoModal === 'editar' ? (movimientoAEditar?.cargadoPor || cargadoPorActual) : cargadoPorActual,
       eventoId: formEventoId || null,
-      origen: formTipo === 'ingreso' ? formOrigen : null,
+      origen: formTipo === 'ingreso' ? (formSubcategoria || formOrigen || 'Seña') : null,
       proveedor: formProveedor.trim() || null,
       notas: formNotas.trim()
     };
@@ -2041,7 +2069,7 @@ export default function CajaView({
                   <div className="grid grid-cols-2 gap-2 bg-white/70 p-1.5 rounded-2xl border border-[#E3DCCE]">
                     <button
                       type="button"
-                      onClick={() => setFormTipo('egreso')}
+                      onClick={() => handleCambiarTipo('egreso')}
                       className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                         formTipo === 'egreso' ? 'bg-[#2F3A2A] text-[#F6F3E9]' : 'text-slate-600'
                       }`}
@@ -2050,7 +2078,7 @@ export default function CajaView({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setFormTipo('ingreso')}
+                      onClick={() => handleCambiarTipo('ingreso')}
                       className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                         formTipo === 'ingreso' ? 'bg-[#5A6B4A] text-[#F6F3E9]' : 'text-slate-600'
                       }`}
@@ -2088,7 +2116,7 @@ export default function CajaView({
                     <input
                       type="text"
                       required
-                      placeholder="Ej: Pago DJ, Compra bebidas, Seña Boda..."
+                      placeholder={formTipo === 'ingreso' ? 'Ej: Seña Boda, Cuota Quinceañera...' : 'Ej: Pago DJ, Compra bebidas...'}
                       value={formConcepto}
                       onChange={(e) => setFormConcepto(e.target.value)}
                       className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE] font-bold"
@@ -2098,30 +2126,36 @@ export default function CajaView({
                   {/* Categoría y Subcategoría Reorganizadas */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-700 font-bold mb-1">Categoría</label>
+                      <label className="block text-slate-700 font-bold mb-1">
+                        {formTipo === 'ingreso' ? 'Tipo de Evento / Origen' : 'Categoría del Gasto'}
+                      </label>
                       <select
                         value={formCategoria}
                         onChange={(e) => {
-                          setFormCategoria(e.target.value);
-                          const subs = CATEGORIAS_CAJA[e.target.value] || [];
+                          const nuevaCat = e.target.value;
+                          setFormCategoria(nuevaCat);
+                          const cats = formTipo === 'ingreso' ? CATEGORIAS_INGRESO : CATEGORIAS_EGRESO;
+                          const subs = cats[nuevaCat] || [];
                           setFormSubcategoria(subs[0] || '');
                         }}
-                        className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE] font-bold"
+                        className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE] font-bold text-xs"
                       >
-                        {Object.keys(CATEGORIAS_CAJA).map(cat => (
+                        {Object.keys(formTipo === 'ingreso' ? CATEGORIAS_INGRESO : CATEGORIAS_EGRESO).map(cat => (
                           <option key={cat} value={cat}>{cat}</option>
                         ))}
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-slate-700 font-bold mb-1">Subcategoría</label>
+                      <label className="block text-slate-700 font-bold mb-1">
+                        {formTipo === 'ingreso' ? 'Modo de Pago / Concepto' : 'Subcategoría'}
+                      </label>
                       <select
                         value={formSubcategoria}
                         onChange={(e) => setFormSubcategoria(e.target.value)}
-                        className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE] font-bold"
+                        className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE] font-bold text-xs"
                       >
-                        {(CATEGORIAS_CAJA[formCategoria] || []).map(sub => (
+                        {((formTipo === 'ingreso' ? CATEGORIAS_INGRESO : CATEGORIAS_EGRESO)[formCategoria] || []).map(sub => (
                           <option key={sub} value={sub}>{sub}</option>
                         ))}
                       </select>
@@ -2164,34 +2198,19 @@ export default function CajaView({
                     </select>
                   </div>
 
-                  {/* Proveedor y Origen */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-slate-700 font-bold mb-1">Proveedor / Destinatario</label>
-                      <input
-                        type="text"
-                        placeholder="Ej: Carnicería Don Juan"
-                        value={formProveedor}
-                        onChange={(e) => setFormProveedor(e.target.value)}
-                        className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE]"
-                      />
-                    </div>
-
-                    {formTipo === 'ingreso' ? (
+                  {/* Proveedor y Responsable (Solo Egreso) o Cliente (Ingreso) */}
+                  {formTipo === 'egreso' ? (
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-slate-700 font-bold mb-1">Origen del Ingreso</label>
-                        <select
-                          value={formOrigen}
-                          onChange={(e) => setFormOrigen(e.target.value)}
+                        <label className="block text-slate-700 font-bold mb-1">Proveedor / Destinatario</label>
+                        <input
+                          type="text"
+                          placeholder="Ej: Carnicería Don Juan"
+                          value={formProveedor}
+                          onChange={(e) => setFormProveedor(e.target.value)}
                           className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE]"
-                        >
-                          <option value="Seña">Seña</option>
-                          <option value="Cuota">Cuota</option>
-                          <option value="Saldo final">Saldo final</option>
-                          <option value="Otro">Otro</option>
-                        </select>
+                        />
                       </div>
-                    ) : (
                       <div>
                         <label className="block text-slate-700 font-bold mb-1">Responsable</label>
                         <input
@@ -2201,8 +2220,19 @@ export default function CajaView({
                           className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE]"
                         />
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">Cliente / Titular que abona (Opcional)</label>
+                      <input
+                        type="text"
+                        placeholder="Ej: Familia Morales, Quinceañera Sofía, Empresa..."
+                        value={formProveedor}
+                        onChange={(e) => setFormProveedor(e.target.value)}
+                        className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE]"
+                      />
+                    </div>
+                  )}
 
                   {/* Notas */}
                   <div>
