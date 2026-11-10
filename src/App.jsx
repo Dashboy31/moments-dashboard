@@ -9,6 +9,7 @@ import CalendarioView from './components/CalendarioView';
 import ChecklistView from './components/ChecklistView';
 import MarketingView from './components/MarketingView';
 import ConfiguracionView from './components/ConfiguracionView';
+import SimuladorView from './components/SimuladorView';
 import CargaRapidaModal from './components/CargaRapidaModal';
 import ManualView from './components/ManualView';
 import MomentsLogo from './components/MomentsLogo';
@@ -336,7 +337,7 @@ export default function App() {
     setPrestamosTramos([]);
     setProveedoresDatos([]);
     sessionStorage.removeItem('moments_caja_pin');
-    if (activeTab === 'caja' || activeTab === 'configuracion') {
+    if (activeTab === 'caja' || activeTab === 'configuracion' || activeTab === 'simulador') {
       setActiveTab('semana');
     }
   };
@@ -570,6 +571,7 @@ export default function App() {
               onEliminarActividad={handleEliminarActividad}
               usuarioActivo={usuarioActivo}
               onIrACaja={handleOpenPinModal}
+              onIrASimulador={() => setActiveTab('simulador')}
               onIrAChecklist={() => setActiveTab('checklist')}
               onIrAManual={() => setActiveTab('manual')}
               eventoDelDia={eventoActivo}
@@ -593,9 +595,6 @@ export default function App() {
                 eventos={eventos}
                 configuracion={configuracion}
                 onGuardarConfiguracion={handleGuardarConfiguracion}
-                prestamosTramos={prestamosTramos}
-                onRegistrarTramoPrestamo={handleRegistrarTramoPrestamo}
-                onEliminarTramoPrestamo={handleEliminarTramoPrestamo}
                 proveedoresDatos={proveedoresDatos}
                 onGuardarProveedorDatos={handleGuardarProveedorDatos}
               />
@@ -607,6 +606,37 @@ export default function App() {
                 <h2 className="text-xl font-black text-slate-900 font-['Playfair_Display']">Caja Gerencial Protegida</h2>
                 <p className="text-xs text-slate-500 mt-1 mb-5">
                   Ingresá el PIN de seguridad de Gerencia (Jesica y Leandro) para acceder a los números y retiros.
+                </p>
+                <button
+                  onClick={handleOpenPinModal}
+                  className="px-6 py-2.5 bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] text-xs font-black rounded-2xl shadow-lg border border-[#C6A96A] transition-all active:scale-95 cursor-pointer font-['Montserrat']"
+                >
+                  Ingresar PIN de Gerencia
+                </button>
+              </div>
+            )
+          )}
+
+          {/* 3. Pestaña Simulador & Préstamos (Protegida) */}
+          {activeTab === 'simulador' && (
+            cajaDesbloqueada ? (
+              <SimuladorView
+                movimientos={movimientos}
+                eventos={eventos}
+                configuracion={configuracion}
+                prestamosTramos={prestamosTramos}
+                onRegistrarTramoPrestamo={handleRegistrarTramoPrestamo}
+                onEliminarTramoPrestamo={handleEliminarTramoPrestamo}
+                usuarioActivo={usuarioActivo}
+              />
+            ) : (
+              <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-10 text-center max-w-md mx-auto shadow-2xl border border-[#C6A96A]/40">
+                <div className="w-16 h-16 bg-[#2F3A2A]/10 text-[#2F3A2A] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#C6A96A]/30">
+                  <Lock className="w-8 h-8 text-[#C6A96A]" />
+                </div>
+                <h2 className="text-xl font-black text-slate-900 font-['Playfair_Display']">Simulador Financiero Protegido</h2>
+                <p className="text-xs text-slate-500 mt-1 mb-5">
+                  Ingresá el PIN de seguridad de Gerencia (Jesica y Leandro) para acceder a la planificación de tramos y préstamos familiares.
                 </p>
                 <button
                   onClick={handleOpenPinModal}

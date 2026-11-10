@@ -176,41 +176,18 @@ export default function CajaView({
   const [traspasoFecha, setTraspasoFecha] = useState(new Date().toISOString().split('T')[0]);
   const [traspasoConcepto, setTraspasoConcepto] = useState('Traspaso interno entre cuentas');
 
-  // Modal registrar tramo de préstamo
-  const [modalTramoAbierto, setModalTramoAbierto] = useState(false);
-  const [tramoMonto, setTramoMonto] = useState('');
-  const [tramoFecha, setTramoFecha] = useState(new Date().toISOString().split('T')[0]);
-  const [tramoEntregadoPor, setTramoEntregadoPor] = useState('Préstamo Familiar (Leandro / Familia)');
-  const [tramoCajaDestino, setTramoCajaDestino] = useState('banco_nacion');
-  const [tramoNotas, setTramoNotas] = useState('');
-
-  // ===========================================================================
-  // SIMULADOR DE COBERTURA Y PRÉSTAMO FAMILIAR (PUNTO 12)
-  // ===========================================================================
   const cfg = configuracion || {
     costoPromedioPlanificacion: 10000000,
     tramoPrestamoSugerido: 20000000,
     colchonSeguridadEventos: 1,
     tarifaAdultoVigente: 127000,
     eventoBaseCosto: 7000000,
-    eventoBasePersonas: 85
+    eventoBasePersonas: 85,
+    fijosReferenciaMes: 5000000
   };
 
-  // Eventos futuros a partir de hoy (sin mantenimiento)
-  const hoyStr = new Date().toISOString().split('T')[0];
-  const eventosFuturos = useMemo(() => {
-    return (eventos || [])
-      .filter(e => e.tipo !== 'mantenimiento' && e.fecha >= hoyStr)
-      .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-  }, [eventos, hoyStr]);
-
-  const [simCostoPromedio, setSimCostoPromedio] = useState(() => cfg.costoPromedioPlanificacion || 10000000);
-  const [simCantEventos, setSimCantEventos] = useState(() => Math.max(1, eventosFuturos.length || 10));
-  const [simIngresosInesperados, setSimIngresosInesperados] = useState(0);
-  const [simCajaManualOverride, setSimCajaManualOverride] = useState(null);
-
   // Totales de movimientos y saldos reales de cajas
-  const { metricasPorCaja, saldoRealSinPrestamos, totalTramosRecibidos, totalDevolucionesPrestamo } = useMemo(() => {
+  const metricasPorCaja = useMemo(() => {
     const res = {
       naranja: { ingresos: 0, egresos: 0, saldo: 0 },
       banco_nacion: { ingresos: 0, egresos: 0, saldo: 0 },
@@ -218,9 +195,6 @@ export default function CajaView({
       efectivo: { ingresos: 0, egresos: 0, saldo: 0 },
       general: { ingresos: 0, egresos: 0, saldo: 0 }
     };
-
-    let tramosSum = 0;
-    let devolucionesSum = 0;
 
     (movimientos || []).forEach(m => {
       const c = getCajaMovimiento(m);
@@ -234,49 +208,14 @@ export default function CajaView({
         if (res[c]) res[c].egresos += val;
         res.general.egresos += val;
       }
-
-      // Identificar si es préstamo o devolución
-      const subcat = String(m.subcategoria || '').toLowerCase();
-      const conc = String(m.concepto || '').toLowerCase();
-      if (esIngreso && (subcat.includes('préstamo familiar') || conc.includes('préstamo familiar') || conc.includes('tramo recibido'))) {
-        tramosSum += val;
-      } else if (!esIngreso && (subcat.includes('devolución préstamo') || conc.includes('devolución préstamo'))) {
-        devolucionesSum += val;
-      }
     });
 
     for (const key of ['naranja', 'banco_nacion', 'mercado_pago', 'efectivo', 'general']) {
       res[key].saldo = res[key].ingresos - res[key].egresos;
     }
 
-    // Saldo real sin contar los tramos de préstamo para no duplicarlos
-    const saldoSinPrestamos = Math.max(0, res.general.saldo - tramosSum);
-
-    return {
-      metricasPorCaja: res,
-      saldoRealSinPrestamos: saldoSinPrestamos,
-      totalTramosRecibidos: tramosSum,
-      totalDevolucionesPrestamo: devolucionesSum
-    };
+    return res;
   }, [movimientos]);
-
-  // CÁLCULOS DEL SIMULADOR SEGÚN FÓRMULAS EXACTAS:
-  const simCajaActual = simCajaManualOverride !== null ? simCajaManualOverride : saldoRealSinPrestamos;
-  const simCostoEventos = simCantEventos * simCostoPromedio;
-  const simDisponible = simCajaActual + Number(simIngresosInesperados || 0);
-  const simPrestamoNecesario = Math.max(0, simCostoEventos - simDisponible);
-  const simPrestamoRecibido = totalTramosRecibidos;
-  const simFaltaPedir = Math.max(0, simPrestamoNecesario - simPrestamoRecibido);
-  const simCajaParaOperar = simDisponible + simPrestamoRecibido;
-  const simEventosCubiertos = simCostoPromedio > 0 ? Math.floor(simCajaParaOperar / simCostoPromedio) : 0;
-  const simSaldoAdeudado = Math.max(0, simPrestamoRecibido - totalDevolucionesPrestamo);
-
-  // Alerta "Pedir próximo tramo"
-  const colchon = cfg.colchonSeguridadEventos || 1;
-  const costoColchon = colchon * simCostoPromedio;
-  const alertaTramoActiva = simCajaParaOperar < costoColchon && simFaltaPedir > 0;
-  const montoTramoSugerido = Math.min(cfg.tramoPrestamoSugerido || 20000000, simFaltaPedir);
-  const proximoEvento = eventosFuturos[0] || null;
 
   // Lista de meses disponibles para filtro
   const mesesDisponibles = useMemo(() => {
@@ -466,26 +405,6 @@ export default function CajaView({
     }
 
     setModalAbierto(false);
-  };
-
-  // Guardar tramo de préstamo familiar
-  const handleGuardarTramo = async (e) => {
-    e.preventDefault();
-    const num = Number(tramoMonto);
-    if (!num || num <= 0) return;
-
-    if (onRegistrarTramoPrestamo) {
-      await onRegistrarTramoPrestamo({
-        fecha: tramoFecha,
-        monto: num,
-        entregadoPor: tramoEntregadoPor,
-        cajaDestino: tramoCajaDestino,
-        notas: tramoNotas
-      });
-    }
-    setModalTramoAbierto(false);
-    setTramoMonto('');
-    setTramoNotas('');
   };
 
   // ===========================================================================
@@ -1009,290 +928,6 @@ export default function CajaView({
   return (
     <div className="space-y-6 animate-fadeIn font-['Montserrat']">
       
-      {/* =====================================================================
-          1. SIMULADOR DE COBERTURA Y PRÉSTAMO FAMILIAR POR TRAMOS (PUNTO 12)
-          Arriba de todo en la pestaña Caja, altamente visual para Gerencia y Leandro
-         ===================================================================== */}
-      <div className="bg-[#1E251B] text-[#F6F3E9] rounded-3xl p-5 sm:p-7 shadow-2xl border border-[#C6A96A]/50 relative overflow-hidden">
-        
-        {/* Glow dorado decorativo */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#C6A96A]/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
-
-        {/* ALERTA: PEDIR PRÓXIMO TRAMO (aparece arriba en rojo si la caja no cubre el colchón) */}
-        {alertaTramoActiva && (
-          <div className="mb-5 p-4 rounded-2xl bg-rose-950/80 border-2 border-rose-500 text-rose-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg animate-pulse">
-            <div className="flex items-center gap-3">
-              <span className="w-9 h-9 rounded-xl bg-rose-600 flex items-center justify-center font-bold text-white shrink-0">
-                <AlertTriangle className="w-5 h-5" />
-              </span>
-              <div>
-                <strong className="block text-sm font-bold text-white">
-                  🚨 Alerta: Solicitar Próximo Tramo de Préstamo Familiar
-                </strong>
-                <span className="text-xs text-rose-200">
-                  La caja actual para operar no cubre el colchón de seguridad de {colchon} evento(s) ({formatARS(costoColchon)}).
-                  {proximoEvento && ` Próximo evento: ${proximoEvento.titulo} (${proximoEvento.fecha}).`}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-              <span className="text-xs font-bold bg-rose-900/90 px-3 py-1.5 rounded-xl border border-rose-400">
-                Sugerido: <strong>{formatARS(montoTramoSugerido)}</strong>
-              </span>
-              <button
-                onClick={() => {
-                  setTramoMonto(String(montoTramoSugerido));
-                  setModalTramoAbierto(true);
-                }}
-                className="px-3.5 py-1.5 rounded-xl bg-white text-rose-950 font-bold text-xs hover:bg-rose-100 transition-all cursor-pointer shadow-sm"
-              >
-                + Cargar Tramo
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Encabezado del Simulador */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-[#C6A96A]/30">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wider uppercase bg-[#C6A96A]/20 text-[#C6A96A] border border-[#C6A96A]/40">
-                <DollarSign className="w-3.5 h-3.5" /> Simulador Financiero
-              </span>
-              <span className="text-xs text-[#E3DCCE]/70 font-semibold">
-                Planificación por Tramos de Préstamo Familiar
-              </span>
-            </div>
-            <h2 className="text-xl sm:text-2xl font-bold font-serif text-[#F6F3E9] mt-1 tracking-tight">
-              Cobertura de Próximos Eventos & Saldo de Deuda
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setModalTramoAbierto(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#C6A96A] hover:bg-[#d8bb7a] text-[#1E251B] font-bold text-xs shadow-md transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4 text-[#1E251B]" />
-              <span>+ Registrar Tramo Recibido</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Controles del Simulador: Eventos y Costo Promedio */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 py-4 text-xs">
-          {/* Cantidad de Eventos */}
-          <div className="p-3 rounded-2xl bg-black/25 border border-white/10">
-            <span className="text-[11px] font-bold text-[#E3DCCE]/80 block mb-1">
-              Cantidad de Eventos a Planificar
-            </span>
-            <div className="flex items-center gap-1.5 mb-2">
-              {[1, 3, 5, 10].map(n => (
-                <button
-                  key={n}
-                  onClick={() => setSimCantEventos(n)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                    simCantEventos === n 
-                      ? 'bg-[#C6A96A] text-[#1E251B]' 
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
-              <button
-                onClick={() => setSimCantEventos(Math.max(1, eventosFuturos.length))}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                  simCantEventos === eventosFuturos.length 
-                    ? 'bg-[#C6A96A] text-[#1E251B]' 
-                    : 'bg-white/10 text-white hover:bg-white/20'
-                }`}
-                title="Todos los eventos futuros cargados en calendario"
-              >
-                Todos ({eventosFuturos.length})
-              </button>
-            </div>
-            <input
-              type="number"
-              min="1"
-              value={simCantEventos}
-              onChange={(e) => setSimCantEventos(Math.max(1, Number(e.target.value)))}
-              className="w-full px-2.5 py-1.5 text-xs font-bold text-white bg-black/40 rounded-xl border border-white/20"
-            />
-          </div>
-
-          {/* Costo Promedio por Evento */}
-          <div className="p-3 rounded-2xl bg-black/25 border border-white/10">
-            <span className="text-[11px] font-bold text-[#E3DCCE]/80 block mb-1">
-              Costo Promedio / Evento
-            </span>
-            <input
-              type="number"
-              step="500000"
-              value={simCostoPromedio}
-              onChange={(e) => setSimCostoPromedio(Number(e.target.value))}
-              className="w-full px-2.5 py-1.5 text-xs font-bold text-[#C6A96A] bg-black/40 rounded-xl border border-white/20 mb-1"
-            />
-            <span className="text-[10px] text-slate-400">
-              {formatARS(simCostoPromedio)} (promedio de planificación)
-            </span>
-          </div>
-
-          {/* Caja Actual Disponible */}
-          <div className="p-3 rounded-2xl bg-black/25 border border-white/10">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] font-bold text-[#E3DCCE]/80">Caja Actual Disponible</span>
-              {simCajaManualOverride !== null && (
-                <button
-                  onClick={() => setSimCajaManualOverride(null)}
-                  className="text-[10px] text-[#C6A96A] hover:underline"
-                >
-                  Volver a real
-                </button>
-              )}
-            </div>
-            <input
-              type="number"
-              value={simCajaActual}
-              onChange={(e) => setSimCajaManualOverride(Number(e.target.value))}
-              className="w-full px-2.5 py-1.5 text-xs font-bold text-emerald-400 bg-black/40 rounded-xl border border-white/20 mb-1"
-            />
-            <span className="text-[10px] text-slate-400">
-              Real en 4 cajas: {formatARS(saldoRealSinPrestamos)}
-            </span>
-          </div>
-
-          {/* Ingresos Inesperados */}
-          <div className="p-3 rounded-2xl bg-black/25 border border-white/10">
-            <span className="text-[11px] font-bold text-[#E3DCCE]/80 block mb-1">
-              Ingresos Inesperados
-            </span>
-            <input
-              type="number"
-              value={simIngresosInesperados}
-              onChange={(e) => setSimIngresosInesperados(Number(e.target.value))}
-              className="w-full px-2.5 py-1.5 text-xs font-bold text-white bg-black/40 rounded-xl border border-white/20 mb-1"
-            />
-            <span className="text-[10px] text-slate-400">
-              Cobros extraordinarios fuera de seña
-            </span>
-          </div>
-        </div>
-
-        {/* 4 Grandes Números Visuales */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
-          
-          {/* 1. COSTO DE LOS EVENTOS (NÚMERO GRANDE EN ROJO) */}
-          <div className="p-4 rounded-2xl bg-rose-950/40 border border-rose-500/40">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-rose-300 block mb-1">
-              Costo de los próximos {simCantEventos} eventos
-            </span>
-            <div className="text-2xl sm:text-3xl font-extrabold text-rose-400 font-serif">
-              {formatARS(simCostoEventos)}
-            </div>
-            <div className="text-[10px] text-rose-300/80 mt-1">
-              {simCantEventos} × {formatARS(simCostoPromedio)}
-            </div>
-          </div>
-
-          {/* 2. DISPONIBLE (NÚMERO GRANDE EN VERDE BOSQUE) */}
-          <div className="p-4 rounded-2xl bg-[#2F3A2A]/80 border border-[#5A6B4A]/50">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#A5B29B] block mb-1">
-              Dinero Disponible
-            </span>
-            <div className="text-2xl sm:text-3xl font-extrabold text-[#E8EDE3] font-serif">
-              {formatARS(simDisponible)}
-            </div>
-            <div className="text-[10px] text-[#A5B29B] mt-1">
-              Caja actual + ingresos inesperados
-            </div>
-          </div>
-
-          {/* 3. PRÉSTAMO NECESARIO Y FALTA PEDIR */}
-          <div className="p-4 rounded-2xl bg-black/40 border border-[#C6A96A]/40">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#C6A96A] block mb-1">
-              Préstamo Necesario
-            </span>
-            <div className="text-2xl sm:text-3xl font-extrabold text-[#C6A96A] font-serif">
-              {formatARS(simPrestamoNecesario)}
-            </div>
-            
-            {/* Barra de avance: Recibido vs Falta Pedir */}
-            <div className="mt-2 space-y-1">
-              <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-[#C6A96A] rounded-full transition-all"
-                  style={{ width: `${simPrestamoNecesario > 0 ? Math.min(100, Math.round((simPrestamoRecibido / simPrestamoNecesario) * 100)) : 100}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-[10px] text-slate-300">
-                <span>Recibido: {formatARS(simPrestamoRecibido)}</span>
-                <span className="font-bold text-rose-400">Falta: {formatARS(simFaltaPedir)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* 4. EVENTOS CUBIERTOS & DEUDA */}
-          <div className="p-4 rounded-2xl bg-black/40 border border-white/10">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300 block mb-1">
-              Cobertura Operativa
-            </span>
-            <div className="text-xl sm:text-2xl font-extrabold text-white font-serif">
-              {simEventosCubiertos} de {simCantEventos} eventos
-            </div>
-            <div className="text-[11px] text-[#C6A96A] font-semibold mt-1">
-              Caja para operar: {formatARS(simCajaParaOperar)}
-            </div>
-            <div className="mt-2 pt-2 border-t border-white/10 flex justify-between text-[10px] text-slate-400">
-              <span>Saldo Adeudado a Familia:</span>
-              <strong className="text-amber-400">{formatARS(simSaldoAdeudado)}</strong>
-            </div>
-          </div>
-
-        </div>
-
-        {/* LÍNEA DE TIEMPO SIMPLE DE PRÓXIMOS EVENTOS */}
-        {eventosFuturos.length > 0 && (
-          <div className="mt-5 pt-4 border-t border-white/10">
-            <div className="text-xs font-bold text-[#E3DCCE]/80 mb-2 flex items-center justify-between">
-              <span>Cronograma de Próximos Eventos y Punto de Cobertura:</span>
-              <span className="text-[11px] text-[#C6A96A]">
-                Con la plata actual se llega hasta el evento #{simEventosCubiertos || 0}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
-              {eventosFuturos.slice(0, 10).map((ev, i) => {
-                const cubierto = i < simEventosCubiertos;
-                const esPuntoCorte = i === simEventosCubiertos;
-
-                return (
-                  <div 
-                    key={ev.id}
-                    className={`p-2.5 rounded-xl border shrink-0 text-xs transition-all min-w-[150px] ${
-                      cubierto 
-                        ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-200' 
-                        : esPuntoCorte 
-                        ? 'bg-rose-950/60 border-rose-500 text-rose-200 ring-2 ring-rose-500/40' 
-                        : 'bg-black/30 border-white/10 text-slate-400'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between text-[10px] font-bold mb-1">
-                      <span>#{i + 1} · {ev.fecha}</span>
-                      <span>{cubierto ? '🟢 Cubierto' : '🔴 Requiere tramo'}</span>
-                    </div>
-                    <div className="font-bold truncate text-white">{ev.titulo}</div>
-                    <div className="text-[10px] text-slate-300 mt-0.5">{ev.cliente}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-      </div>
-
       {/* =====================================================================
           2. NAVEGACIÓN ENTRE SECCIONES DE CAJA
           Cajas & Cuentas | Resultado Mensual | Control de Fijos | Proveedores | Importar Excel
@@ -2265,113 +1900,6 @@ export default function CajaView({
               </div>
 
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* =====================================================================
-          MODAL: REGISTRAR TRAMO DE PRÉSTAMO FAMILIAR (PUNTO 12)
-         ===================================================================== */}
-      {modalTramoAbierto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto animate-fadeIn font-['Montserrat']">
-          <div className="relative w-full max-w-md bg-[#F6F3E9] rounded-3xl shadow-2xl border border-[#C6A96A]/60 p-6 my-8 text-slate-800">
-            
-            <div className="flex items-center justify-between pb-3 border-b border-[#E3DCCE] mb-4">
-              <div className="flex items-center gap-2">
-                <span className="w-8 h-8 rounded-xl bg-[#2F3A2A] text-[#C6A96A] flex items-center justify-center font-bold">
-                  <Plus className="w-4 h-4 text-[#C6A96A]" />
-                </span>
-                <h3 className="font-bold text-base text-[#2F3A2A] font-serif">
-                  Registrar Tramo de Préstamo Familiar
-                </h3>
-              </div>
-              <button onClick={() => setModalTramoAbierto(false)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-full">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleGuardarTramo} className="space-y-4 text-xs">
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">Monto del Tramo Recibido *</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2 font-bold text-slate-400">$</span>
-                  <input
-                    type="number"
-                    required
-                    placeholder="Ej: 20000000"
-                    value={tramoMonto}
-                    onChange={(e) => setTramoMonto(e.target.value)}
-                    className="w-full pl-7 pr-3 py-2 text-sm font-bold bg-white rounded-xl border border-[#E3DCCE] text-[#2F3A2A]"
-                    autoFocus
-                  />
-                </div>
-                <div className="text-[11px] text-[#5A6B4A] font-bold mt-1">
-                  {formatARS(tramoMonto)}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">Fecha de Recepción</label>
-                <input
-                  type="date"
-                  value={tramoFecha}
-                  onChange={(e) => setTramoFecha(e.target.value)}
-                  className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE] font-bold"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">Aportante / Quién lo entregó</label>
-                <input
-                  type="text"
-                  value={tramoEntregadoPor}
-                  onChange={(e) => setTramoEntregadoPor(e.target.value)}
-                  className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">Ingresar en Cuenta / Caja</label>
-                <select
-                  value={tramoCajaDestino}
-                  onChange={(e) => setTramoCajaDestino(e.target.value)}
-                  className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE] font-bold"
-                >
-                  {CAJAS_DEF.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                </select>
-                <span className="text-[10px] text-slate-500 mt-1 block">
-                  Impacta automáticamente como ingreso en la caja seleccionada bajo "Financiamiento → Préstamo familiar".
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">Notas / Observación</label>
-                <input
-                  type="text"
-                  placeholder="Detalles sobre el acuerdo de devolución o recibo..."
-                  value={tramoNotas}
-                  onChange={(e) => setTramoNotas(e.target.value)}
-                  className="w-full px-3 py-2 bg-white rounded-xl border border-[#E3DCCE]"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#E3DCCE]">
-                <button
-                  type="button"
-                  onClick={() => setModalTramoAbierto(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200/50 rounded-xl"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] text-xs font-bold rounded-xl border border-[#C6A96A] shadow-md transition-all cursor-pointer"
-                >
-                  Registrar Tramo
-                </button>
-              </div>
-            </form>
-
           </div>
         </div>
       )}

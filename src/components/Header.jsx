@@ -15,7 +15,8 @@ import {
   Users,
   ShieldCheck,
   Sliders,
-  BookOpen
+  BookOpen,
+  Calculator
 } from 'lucide-react';
 import { USUARIOS } from '../utils/mockData';
 import MomentsLogo from './MomentsLogo';
@@ -53,8 +54,16 @@ export default function Header({
       protegido: true
     },
     {
-      id: 'calendario',
+      id: 'simulador',
       number: '3',
+      label: 'Simulador & Préstamos',
+      shortLabel: 'Simulador',
+      icon: Calculator,
+      protegido: true
+    },
+    {
+      id: 'calendario',
+      number: '4',
       label: 'Calendario de Eventos',
       shortLabel: 'Calendario',
       icon: CalendarDays,
@@ -62,7 +71,7 @@ export default function Header({
     },
     {
       id: 'checklist',
-      number: '4',
+      number: '5',
       label: 'Checklist de Logística',
       shortLabel: 'Checklist',
       icon: CheckSquare,
@@ -70,7 +79,7 @@ export default function Header({
     },
     {
       id: 'marketing',
-      number: '5',
+      number: '6',
       label: 'Tarifario & Ventas',
       shortLabel: 'Ventas',
       icon: TrendingUp,
@@ -78,7 +87,7 @@ export default function Header({
     },
     {
       id: 'configuracion',
-      number: '6',
+      number: '7',
       label: 'Configuración',
       shortLabel: 'Config',
       icon: Sliders,
@@ -86,7 +95,7 @@ export default function Header({
     },
     {
       id: 'manual',
-      number: '7',
+      number: '8',
       label: 'Manual de Uso del Panel',
       shortLabel: 'Manual',
       icon: BookOpen,
@@ -125,14 +134,11 @@ export default function Header({
           onClick={() => setActiveTab('semana')}
           title="Ir al inicio (Semana & Acciones)"
         >
-          <div className="bg-[#2F3A2A] hover:bg-[#384532] px-2 py-1.5 rounded-2xl border border-[#C6A96A]/40 shadow-sm transition">
+          <div className="bg-[#2F3A2A] hover:bg-[#384532] px-3 py-1.5 rounded-2xl border border-[#C6A96A]/40 shadow-sm transition">
             <MomentsLogo variant="header" />
           </div>
           <div className="hidden xl:block">
-            <span className="text-[10px] font-bold text-[#C6A96A] uppercase tracking-widest block font-['Montserrat']">
-              Salón de Eventos
-            </span>
-            <span className="text-[11px] text-[#E8EDE3] font-medium">
+            <span className="text-[11px] text-[#E8EDE3]/80 font-medium">
               San Rafael, Mendoza
             </span>
           </div>

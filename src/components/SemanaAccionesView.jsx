@@ -37,6 +37,7 @@ export default function SemanaAccionesView({
   onEliminarActividad,
   usuarioActivo,
   onIrACaja,
+  onIrASimulador,
   onIrAChecklist,
   onIrAManual,
   eventoDelDia,
@@ -522,10 +523,10 @@ export default function SemanaAccionesView({
                 </div>
               </div>
             </div>
-            {onIrACaja && (
+            {(onIrASimulador || onIrACaja) && (
               <button
-                onClick={onIrACaja}
-                className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 transition shadow-sm"
+                onClick={onIrASimulador || onIrACaja}
+                className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 transition shadow-sm cursor-pointer"
               >
                 Abrir Simulador
               </button>

@@ -630,18 +630,30 @@ export default function ManualView({
                   </div>
                   <div>
                     <h2 className="text-xl font-black text-slate-900 font-['Playfair_Display']">
-                      6. Simulador de Cobertura y Préstamo Familiar
+                      6. Pestaña 3: Simulador de Cobertura y Préstamo Familiar (Privado)
                     </h2>
                     <p className="text-xs text-slate-500 font-medium">
                       Planificación preventiva para no quedarse sin fondos operativos ante múltiples eventos.
                     </p>
                   </div>
                 </div>
+                {onNavegarTab && (
+                  <button
+                    onClick={() => {
+                      if (!cajaDesbloqueada && onOpenPinModal) onOpenPinModal();
+                      else onNavegarTab('simulador');
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2F3A2A] hover:bg-[#3D4C37] text-[#F6F3E9] text-xs font-bold rounded-xl border border-[#C6A96A] cursor-pointer"
+                  >
+                    <span>Abrir Simulador</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
               <div className="space-y-4 text-xs leading-relaxed text-slate-700">
                 <p>
-                  Ubicado en la parte superior de la vista de Caja, este panel le responde a Jesica en un segundo: <strong>¿Cuántos eventos futuros podemos pagar con la plata que tenemos hoy en el banco y en la mano?</strong>
+                  Ubicado en la pestaña privada <strong>"3. Simulador"</strong> (con acceso restringido por clave 1616), este panel le responde a Leandro y a la Gerencia en un segundo: <strong>¿Cuántos eventos futuros podemos pagar con la plata que tenemos hoy en el banco y en la mano?</strong>
                 </p>
 
                 <div className="p-4 rounded-2xl bg-slate-900 text-white space-y-2">

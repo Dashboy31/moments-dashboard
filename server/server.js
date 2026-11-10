@@ -18,12 +18,12 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3060;
 
-// PIN de Caja: de Gerencia (Jesica y Leandro).
-// Acepta siempre '1234' por defecto y también el valor configurado en process.env.CAJA_PIN.
+// PIN de Caja y Simulador: de Gerencia (Jesica y Leandro).
+// Oficialmente establecido en '1616'. También admite CAJA_PIN del entorno y '1234' por retrocompatibilidad.
 function esPinCorrecto(pin) {
   const p = String(pin || '').trim();
   if (!p) return false;
-  if (p === '1234') return true;
+  if (p === '1616' || p === '1234') return true;
   const envPin = String(process.env.CAJA_PIN || '').trim();
   if (envPin && p === envPin) return true;
   return false;
